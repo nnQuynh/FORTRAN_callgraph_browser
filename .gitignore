@@ -107,3 +107,7 @@ dist
 
 # TernJS port file
 .tern-port
+
+# linter output mod
+*.mod
+*__genmod.*
