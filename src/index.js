@@ -37,6 +37,7 @@ async function draw() {
         ...nodes.map((d, i) => {
             d.id = d.routine;
             d.index = i;
+            d.filename = d.filename;
             d.r = d.code ? d.code.match(/\n/gi).length : 1;
             // d.x = Math.random()*100;
             // d.y = Math.random()*100;
@@ -88,7 +89,8 @@ async function draw() {
                 .classed("target_" + d.target, true);
         })
         .on("mouseover", (e, d) => {
-            header.text(d.id);
+            // header.text(d.id);
+            header.text(d.id + " - File:" + d.filename);
             // console.log(d,
             // d.module+':'+d.source)
             if (select) {
@@ -100,7 +102,8 @@ async function draw() {
             select = !select;
             console.log(select);
 
-            header.text(d.id);
+            // header.text(d.id);
+            header.text(d.id + " - File:" + d.filename);
             console.log(d, d.module + ":" + d.source);
             if (select) {
                 ipcRenderer.send("newcode", { code: d.code, id: d.id });

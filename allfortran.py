@@ -50,7 +50,7 @@ args = parser.parse_args()
 print(args)
 
 # get a list of all paths
-__loc__ = args.path
+__loc__ = 'flexpart' # args.path
 allpaths = list(Path(__loc__).rglob('*.F*'))
 allpaths.extend(list(Path(__loc__).rglob('*.f*')))
 
@@ -134,7 +134,7 @@ for fn in tqdm(range(len(allpaths))):
             
             links[target] = dict(chains=chains, source=origin, target=target.upper(), loop = 'Do' in cstr , condition = 'If' in cstr , file = allpaths[fn])
 
-        store[origin] = dict(code=code, content=str(content),links=links, hook=hook, parent=origin)
+        store[origin] = dict(filename = allpaths[fn], code=code, content=str(content),links=links, hook=hook, parent=origin)
         
 
 ##########################
@@ -151,6 +151,10 @@ for i in store:
 
 
 df = pd.DataFrame(data,columns='source target filename loop condition'.split()) 
+
+df['source'] = df['source'].astype(str)
+df['target'] = df['target'].astype(str)
+df['filename'] = df['filename'].astype(str)
 
 del data
 
@@ -171,14 +175,22 @@ nds = []
 for i in store:
     target = df[df.target==i].sum()
     st = store[i]
-    nds.append([i, st['parent'], st['code'],bool(io.match(i)),bool(target.loop),bool(target.condition)]) 
+    nds.append([i, str(st['filename']), st['parent'], st['code'],bool(io.match(i)),bool(target.loop),bool(target.condition)]) 
+    # nds.append([i, st['parent'], st['code'],bool(io.match(i)),bool(target.loop),bool(target.condition)]) 
 
 for i in set(df.target) - set(store.keys()):
     nds.append([i, 'UNKNOWN', None,bool(io.match(i)),False,False]) 
     
-dfn = pd.DataFrame(nds, columns = 'routine parent code io loop condition'.split())
+dfn = pd.DataFrame(nds, columns = 'routine filename parent code io loop condition'.split())
+# dfn = pd.DataFrame(nds, columns = 'routine parent code io loop condition'.split())
 dfn['x']= random.random(len(dfn))*100   
 dfn['y']= random.random(len(dfn))*100 
+
+dfn.loc[dfn['code'] == True, 'code'] = False
+dfn['filename'] = dfn['filename'].astype(str)
+dfn['parent'] = dfn['parent'].astype(str)
+# dfn['code'] = dfn['code'].astype(str)
+
 
 share = {}
 share['location']= __loc__
