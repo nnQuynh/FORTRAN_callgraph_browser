@@ -1,0 +1,143 @@
+#------------------------------------------------------------------------
+#
+#       @(#)Makefile  2005/10/01
+#
+#       Makefile for ANGEL
+#
+#------------------------------------------------------------------------
+##### sors #####
+#------------------------------------------------------------------------
+
+OBJ0 = \
+      charvarmod.o cvaloutmod.o
+
+OBJ1 = \
+      a-alone.o
+
+OBJ2 = \
+      a-main1.o  a-hsect.o  a-line.o  a-func.o  a-utl00.o  \
+      a-main0.o  a-wtext.o  mdp-uni90.o  errwrite.o utl03.o \
+      mpi-non.o  errcheck.o
+
+#------------------------------------------------------------------------
+##### set executable file name #####
+#------------------------------------------------------------------------
+
+TARGET = ../angel_lin.exe
+
+### Machine Dependent variables, please set your environment
+ENVFLAGS = LinIfort
+# Linux Intel Fortran:                                     LinIfort
+# Linux Intel ifx:                                         LinIFX
+# Linux gfortran:                                          LinGfort
+# Linux NVIDIA compiler (former PGI Fortran):              LinNVIDIA
+# Windows gfortran (4.8 or 7 series):                      WinGfort
+# Windows Cygwin gfortran (4.8 or 7 series):               WinCygGfort
+# Mac Intel fortran:                                       MacIfort
+# Mac PGI fortran:                                         MacPGIfort
+# Mac gfortran:                                            MacGfort
+# SGI ICE X (JAEA supercomputer since Nov. 2015):          SGIICEX
+# HPE SGI8600 (JAEA supercomputer since Nov. 2020):        SGI8600
+# FX1 (you have to use "gmake" instead of "make"):         FX1
+
+#------------------------------------------------------------------------
+##### set compile options #####
+#------------------------------------------------------------------------
+# Linux Intel Fortran
+ifeq ($(ENVFLAGS),LinIfort)
+  FFLAGS = -O4 -fpconstant
+  FC = ifort
+
+#------------------------------------------------------------------------
+# Linux Intel ifx
+else ifeq ($(ENVFLAGS),LinIFX)
+  FFLAGS = -O4 -fpconstant
+  FC = ifx
+  LDLIBS = -static-intel
+
+#------------------------------------------------------------------------
+# Linux gfortran
+else ifeq ($(ENVFLAGS),LinGfort)
+  FFLAGS = -O4
+  FC = gfortran
+
+#------------------------------------------------------------------------
+# Linux NVIDIA compiler (former PGI Fortran)
+else ifeq ($(ENVFLAGS),LinNVIDIA)
+  FFLAGS = -O2 -r8 -fast -mcmodel=medium -Mfixed -Mpreprocess -Mbackslash
+  FC = pgfortran
+
+#------------------------------------------------------------------------
+# Windows gfortran (4.8 or 7 series)
+else ifeq ($(ENVFLAGS),WinGfort)
+  FFLAGS = gfortran
+  FC = -fdefault-double-8 -fdefault-real-8 -fdollar-ok -std=legacy
+
+#------------------------------------------------------------------------
+# Windows Cygwin gfortran (4.8 or 7 series)
+else ifeq ($(ENVFLAGS),WinCygGfort)
+  FFLAGS = -O0 -fdefault-double-8 -fdefault-real-8 -fdollar-ok
+  FC = gfortran
+
+#------------------------------------------------------------------------
+# Mac Intel fortran
+else ifeq ($(ENVFLAGS),MacIfort)
+  FFLAGS = -fpconstant -O3
+  FC = ifort
+
+#------------------------------------------------------------------------
+# Mac PGI fortran
+else ifeq ($(ENVFLAGS),MacPGIfort)
+  FFLAGS = -O2 -Mipa=fast
+  FC = pgfortran
+
+#------------------------------------------------------------------------
+# Mac gfortran
+else ifeq ($(ENVFLAGS),MacGfort)
+  FFLAGS = -O3 -fdefault-double-8 -fdefault-real-8 -fdollar-ok -std=legacy
+  FC = gfortran
+  LDLIBS += -static-libgfortran -static-libquadmath
+
+#------------------------------------------------------------------------
+# SGI ICE X (JAEA supercomputer since Nov. 2015)
+else ifeq ($(ENVFLAGS),SGIICEX)
+  FFLAGS = -O3 -fpconstant
+  FC = ifort
+
+#------------------------------------------------------------------------
+# HPE SGI8600 (JAEA supercomputer since Nov. 2020)
+else ifeq ($(ENVFLAGS),SGI8600)
+  FFLAGS = -O3 -fpconstant
+  FC = ifort
+
+#------------------------------------------------------------------------
+# FX1 (you have to use "gmake" instead of "make")
+else ifeq ($(ENVFLAGS),FX1)
+  FFLAGS   = -fw -X9 -Am $(OMPFLAGS) \
+             -xzdistfunc,Gau -xtime_b -xshellspar -xfnf \
+             -xsmmmod.xi,smmmod.eps
+  FFLAGS  += -Kfast,ocl,preex
+  FC = frt
+
+endif
+#------------------------------------------------------------------------
+
+MAKE    = Makefile
+CC      =  cc
+CFLAGS  = -O0
+
+OBJS = $(OBJ0) $(OBJ1) $(OBJ2)
+
+.f.o	:
+	$(FC) $(FFLAGS) -c $*.f
+.c.o	:
+	$(CC) $(CFLAGS) -c $*.c
+
+all	:$(OBJS)
+	$(FC) -o $(TARGET) $(OBJS) $(LDLIBS)
+
+$(OBJ1)	: angel00.inc
+$(OBJ2)	: angel01.inc
+
+clean	:
+	rm -f $(OBJS)
