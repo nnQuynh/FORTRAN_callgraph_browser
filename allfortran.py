@@ -50,8 +50,9 @@ args = parser.parse_args()
 print(args)
 
 # get a list of all paths
-__loc__ = 'flexpart - Copy' # args.path
+# __loc__ = 'flexpart - Copy' # args.path
 __loc__ = 'phits_small' # args.path
+# __loc__ = 'phits' # args.path
 allpaths = list(Path(__loc__).rglob('*.F*'))
 allpaths.extend(list(Path(__loc__).rglob('*.f*')))
 
@@ -108,7 +109,7 @@ case[0].children[0].get_name().__str__()
 
 
 for fn in tqdm(range(len(allpaths))):
-    print('Parsing file ', fn, ' of ', len(allpaths), ' : ', allpaths[fn])
+    print('\nParsing file ', fn, ' of ', len(allpaths), ' : ', allpaths[fn])
     parse_tree_base = ffind(fn)
 
     case = [i.parent for i in fparser.two.utils.walk(parse_tree_base,types=fparser.two.Fortran2003.End_Subroutine_Stmt)]
