@@ -172,7 +172,6 @@ C =================
 
           if(infllog(inum-901) == 0 ) then
            write(6,103) trim(filenames(cc)) 
-  103 format(" ** Warning:"1x,a,1x"is empty")
             cc = cc - 1
             iflog = iflog + 1
             write(901,fmt='(a)') "       "

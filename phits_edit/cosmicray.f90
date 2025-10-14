@@ -166,7 +166,7 @@ if(ifirst.eq.0) then
 endif
 
 if(ispe.lt.1.or.ispe.gt.nSPE) then
- write(*,'(''environ (='',i4,'') should be between 1 to '',i2,'' for SPE mode'')'),ispe,nSPE
+ write(*,'(''environ (='',i4,'') should be between 1 to '',i2,'' for SPE mode'')')
  stop
 endif
 

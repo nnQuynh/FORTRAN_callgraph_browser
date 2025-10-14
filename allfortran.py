@@ -43,9 +43,6 @@ parser.add_argument('-p','--path',dest='path',type=str, help= 'location of fortr
 parser.add_argument('-n','--desc',dest='description',type=str, help= 'location of fortran source code', nargs='?',default='undefined')
 parser.add_argument('-s','--skip',dest='skip',type=str, help= 'which routine names to skip separated by a space. ', nargs='?',default='undefined')
 
-
-
-
 args = parser.parse_args()
 print(args)
 
@@ -64,8 +61,6 @@ print('Ignoring names: ', ' | '.join(skip))
 ## functions
 ##########################
 
-
-
 def ffind(n):
     '''Get the tree for a certain file number'''
     f90 = allpaths[n]
@@ -73,7 +68,6 @@ def ffind(n):
     f2008_parser = ParserFactory().create(std="f2003")
     parse_tree = f2008_parser(reader)
     return parse_tree
-    
 
 def callhistory(x,chain=[]):
     '''Recursively generate the nested call history for a call'''
@@ -86,16 +80,11 @@ def callhistory(x,chain=[]):
         chain.append(yt.__name__)
         return callhistory(y,chain)
 
-
-
 ##########################
 ## Begin Code forEach File
 ##########################
-
 store = {} # main data
 empty = [] # empty files not containing a module
-
-
 
 '''
 parse_tree_base = ffind(2)    
@@ -105,9 +94,6 @@ case = [i.parent for i in fparser.two.utils.walk(parse_tree_base,types=fparser.t
 case[0].children[0].get_name().__str__() 
 
 '''
-
-
-
 for fn in tqdm(range(len(allpaths))):
     print('\nParsing file ', fn, ' of ', len(allpaths), ' : ', allpaths[fn])
     parse_tree_base = ffind(fn)
@@ -115,7 +101,6 @@ for fn in tqdm(range(len(allpaths))):
     case = [i.parent for i in fparser.two.utils.walk(parse_tree_base,types=fparser.two.Fortran2003.End_Subroutine_Stmt)]
 
     f2008_parser = ParserFactory().create(std="f2008")
-
 
     for content in case:
         '''
@@ -139,11 +124,9 @@ for fn in tqdm(range(len(allpaths))):
 
         store[origin] = dict(filename = allpaths[fn], code=code, content=str(content),links=links, hook=hook, parent=origin)
         
-
 ##########################
 ## get information for each
 ##########################
-
 
 data = []
 for i in store:
@@ -151,7 +134,6 @@ for i in store:
     for j in x['links']:
         j = x['links'][j]
         data.append([j['source'],j['target'],j['file'],j['loop'],j['condition']])
-
 
 df = pd.DataFrame(data,columns='source target filename loop condition'.split()) 
 
@@ -193,7 +175,6 @@ dfn.loc[dfn['code'] == True, 'code'] = False
 dfn['filename'] = dfn['filename'].astype(str)
 dfn['parent'] = dfn['parent'].astype(str)
 # dfn['code'] = dfn['code'].astype(str)
-
 
 share = {}
 share['location']= __loc__

@@ -1,18 +1,18 @@
-************************************************************************
-*                                                                      *
+
+
       subroutine xstgmm(mm,sigt,ein,mk)
-*                                                                      *
-*     calculate cross section for the muon pair production.            *
-*     Last modified by Y.Sakaki on 2019/07/02                          *
-*                                                                      *
-************************************************************************
+
+
+
+
+
       use GGMBANKMOD !FURUTA
       use GGMARRAYMOD !2020ASTOM
       use moddas_material
 
       implicit real*8 (a-h,o-z)
 
-*-----------------------------------------------------------------------
+
 
       include 'param.inc'
       include 'ggsparam.inc'
@@ -21,17 +21,17 @@
       common /kmat1g/ kmat(kvlmax)
       common /celdn/  denr(kvlmax), denm(kvlmax), denc(kvlmax)
 
-*-----------------------------------------------------------------------
-*     initialization of this material and particle
-*-----------------------------------------------------------------------
+
+
+
 
       erg  = ein
       imat = mk
       averaged_xsec = 0.0d0
 
-*-----------------------------------------------------------------------
-*     expand natural nucleus and calculate average x-section
-*-----------------------------------------------------------------------
+
+
+
       ! "jmd(1+mk)" is basically 1
       ! "jmd(1+mk+1) - 1" is the total number of RIs in the considering material.
       ! For example, considering a material "H 2 O 1", it's water,
@@ -90,11 +90,11 @@
 
       end do
 
-*-----------------------------------------------------------------------
+
 
       sigt  = averaged_xsec
 
-*-----------------------------------------------------------------------
+
       return
       end
 
@@ -106,20 +106,20 @@
 
 
 
-************************************************************************
-*                                                                      *
+
+
       function getxstgmm_sum(erg,iZ,iA)
-*                                                                      *
-*     calculate cross section for the muon pair production.            *
-*     The contribution from all scattering modes are summed up         *
-*     The unit is barn.                                                *
-*     erg: incident photon energy [MeV]                                *
-*     iZ: atomic number of a target particle                           *
-*     iA: mass   number of a target particle                           *
-*     Exact Born Formula is used for the estimation.                   *
-*     Last modified by Y.Sakaki on 2019/08/14                          *
-*                                                                      *
-************************************************************************
+
+
+
+
+
+
+
+
+
+
+
       implicit real*8 (a-h,o-z)
       igmm_coh   = 1 ! sakaki parameter
       igmm_quasi = 1
@@ -131,22 +131,22 @@
       getxstgmm_sum=tmp
       return
       end
-************************************************************************
-*                                                                      *
+
+
       function getxstgmm(isw,erg,iZ,iA)
-*                                                                      *
-*     calculate cross section for the muon pair production.            *
-*     The unit is barn.                                                *
-*     isw=1: coherent scattering                                       *
-*        =2: quasi-elastic scattering                                  *
-*        =3: inelastic scattering                                      *
-*     erg: incident photon energy [MeV]                                *
-*     iZ: atomic number of a target particle                           *
-*     iA: mass   number of a target particle                           *
-*     Exact Born Formula is used for the estimation.                   *
-*     Last modified by Y.Sakaki on 2019/08/14                          *
-*                                                                      *
-************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
       implicit real*8 (a-h,o-z)
       real*8 lnk,lnk0
       parameter ( pi = 3.141592653589793d0 )
@@ -259,23 +259,23 @@
 
       return
       end
-************************************************************************
-*                                                                      *
+
+
       function getxstgmm_max(isw,erg,iZ,iA)
-*                                                                      *
-*     calculate maximum value of the cross section for the muon pair   *
-*     production, dsigma/(dp*dphi*deta*du*dmf2).                       *
-*     The unit is (1/MeV2)/(MeV*1*1*1*MeV2)=1/MeV5                     *
-*     isw=1: coherent scattering                                       *
-*        =2: quasi-elastic scattering                                  *
-*        =3: inelastic scattering                                      *
-*     erg: incident photon energy [MeV]                                *
-*     iZ: atomic number of a target particle                           *
-*     iA: mass   number of a target particle                           *
-*     Exact Born Formula is used for the estimation                    *
-*     Last modified by Y.Sakaki on 2019/08/14                          *
-*                                                                      *
-************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       implicit real*8 (a-h,o-z)
       real*8 lnk,lnk0
       parameter ( pi = 3.141592653589793d0 )
@@ -407,17 +407,17 @@
 
       return
       end
-************************************************************************
+
       function fit_gmm1(iA,b1,b2,b3)
-************************************************************************
+
       implicit real*8 (a-h,o-z)
       real b1,b2,b3
       fit_gmm1=b1+b2*iA**b3
       return
       end
-************************************************************************
+
       subroutine gen_gmm(mtd,isw,ein,iZ,iA,            event)
-************************************************************************
+
       implicit real*8 (a-h,o-z) ! i,j,k,l,m,n
       parameter ( pi = 3.141592653589793d0 )
       real*8 :: event(20)
@@ -429,7 +429,7 @@
       call gen_gmm_cut(mtd,isw,ein,iZ,iA,c1,c2,c3,c4,event)
       return
       end
-************************************************************************
+
       subroutine gen_gmm_cut(mtd,isw,ein,iZ,iA,c1,c2,c3,c4,event)
       ! generate 4-momenta of final states in gamma-->mu+mu-
       ! p = absolute value of 3 momentum for muon-
@@ -440,7 +440,7 @@
       ! iA = A
       ! c1 < p     < c2
       ! c3 < theta < c4
-************************************************************************
+
       implicit real*8 (a-h,o-z) ! i,j,k,l,m,n
       parameter ( pi = 3.141592653589793d0 )
       parameter ( rm = 105.6583715d0 )    ! muon mass [MeV/c**2]
@@ -793,9 +793,9 @@
       ! ----------------------------------------------------------------
       return
       end
-************************************************************************
+
       subroutine rotate2gamma_dir(event,k,uuu,vvv,www)
-************************************************************************
+
       implicit real*8 (a-z)
       real*8 :: event(20)
       kx=k*uuu
@@ -826,36 +826,36 @@
       event(8)= R31*px + R32*py + R33*pz
       return
       end
-************************************************************************
+
       function G2p_el(rt)
-************************************************************************
+
       implicit real*8 (a-h,o-z)
       tau = rt/(4.*938.272046d0**2)
       rFactor = 1.0/(1.0+rt/(0.71*1.0d+6))**4
       G2p_el = rFactor*(1+7.7841*tau)/(1.+tau)
       return
       end
-************************************************************************
+
       function G1p_el(rt)
-************************************************************************
+
       implicit real*8 (a-h,o-z)
       tau = rt/(4.*938.272046d0**2)
       rFactor = 1.0/(1.0+rt/(0.71*1.0d+6))**4
       G1p_el = rFactor*(7.7841*tau)
       return
       end
-************************************************************************
+
       function G2n_el(rt)
-************************************************************************
+
       implicit real*8 (a-h,o-z)
       tau = rt/(4.*938.272046d0**2)
       rFactor = 1.0/(1.0+rt/(0.71*1.0d+6))**4
       G2n_el = rFactor*(3.6481*tau)/(1.+tau)
       return
       end
-************************************************************************
+
       function G1n_el(rt)
-************************************************************************
+
       implicit real*8 (a-h,o-z)
       tau = rt/(4.*938.272046d0**2)
       rFactor = 1.0/(1.0+rt/(0.71*1.0d+6))**4
@@ -864,9 +864,9 @@
       end
 
 
-************************************************************************
+
       function W1p_inel(rt,rmf2)
-************************************************************************
+
       implicit real*8 (a-h,o-z)
       parameter ( pi = 3.141592653589793d0 )
       parameter ( alpha = 7.297353d-3 )   ! fine-structure constant
@@ -884,9 +884,9 @@
       W1p_inel = tmp
       return
       end
-************************************************************************
+
       function W2p_inel(rt,rmf2)
-************************************************************************
+
       implicit real*8 (a-h,o-z)
       parameter ( pi = 3.141592653589793d0 )
       parameter ( alpha = 7.297353d-3 )   ! fine-structure constant
@@ -905,9 +905,9 @@
       W2p_inel = tmp
       return
       end
-************************************************************************
+
       function W2_em(isw,rt,rmf2,iZ,iA)
-************************************************************************
+
       implicit real*8 (a-h,o-z)
       parameter ( rpmass = 938.272046d0 ) ! proton mass [MeV/c**2]
       parameter ( rnmass = 939.565379d0 ) ! neutron mass [MeV/c**2]
@@ -939,9 +939,9 @@
       end if
       return
       end
-************************************************************************
+
       function W1_em(isw,rt,rmf2,iZ,iA)
-************************************************************************
+
       implicit real*8 (a-h,o-z)
       parameter ( rpmass = 938.272046d0 ) ! proton mass [MeV/c**2]
 
@@ -970,9 +970,9 @@
       end if
       return
       end
-************************************************************************
+
       function randmy(rmin,rmax)
-************************************************************************
+
       implicit real*8 (a-h,o-z)
 
     ! call random_number(rnd)
@@ -985,18 +985,18 @@
       return
       end
 
-************************************************************************
-*                                                                      *
+
+
       subroutine sctgmm(eein,wgti,ireg,imat)
-*                                                                      *
-*        calculate a collision of a photon with an atom.               *
-*        last modified by Y.Sakaki on 2019/08/21                       *
-*                                                                      *
-************************************************************************
+
+
+
+
+
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
 
-*-----------------------------------------------------------------------
+
 
       include 'param.inc'
       include 'ggsparam.inc'
@@ -1005,7 +1005,7 @@
       parameter ( rpmass = 938.27d0, rnmass = 939.58d0 )
       real*8 event(20)
 
-*-----------------------------------------------------------------------
+
 
       include 'param00.inc'
 
@@ -1028,36 +1028,35 @@
       common /kmat1g/ kmat(kvlmax)
       common /celdn/  denr(kvlmax), denm(kvlmax), denc(kvlmax)
 
-*-----------------------------------------------------------------------
+
 
       common /wparm/  swtm(20), wc1(20), wc2(20) !FURUTA
       common /wparm0/ wc01(20), wc02(20)         !FURUTA
 !$OMP THREADPRIVATE(/wparm0/)
 
-      common /kcount/ rncnt(40), rnint(200), rnintr(200),
-     &                rnpnt(40), rnpntr(40)
+
 
       common /tstara/ atmrc(10,8)      ! Ogawa 2023/7/18, (10,7) -> (10,8) for plasmon
 !$OMP THREADPRIVATE(/tstara/)
 
-*-----------------------------------------------------------------------
+
       common /adjoint/ iadjnt
 
-*-----------------------------------------------------------------------
+
 
       parameter ( rmumas = 105.6583715d0 )      ! muon mass [MeV/c**2]
 
-*-----------------------------------------------------------------------
+
 
       dimension usave(3), suu(3,2)
       dimension xv(3)
 
-*-----------------------------------------------------------------------
+
 
             nclst = -1
             nclsts = 0
 
-*-----------------------------------------------------------------------
+
 
             if( mcal .ne. 0 ) return
 
@@ -1083,9 +1082,9 @@
                rumpal(i) = 0.0d0
             enddo
 
-*-----------------------------------------------------------------------
-*     save the incoming direction.
-*-----------------------------------------------------------------------
+
+
+
 
             uold(1) = 0.0
             uold(2) = 0.0
@@ -1098,9 +1097,9 @@
             m    = jmd(1+mk)
             m1   = m
 
-*-----------------------------------------------------------------------
-*     pair production
-*-----------------------------------------------------------------------
+
+
+
 
             ! --------------------------------------------------------
             ! choose a scattering mode
