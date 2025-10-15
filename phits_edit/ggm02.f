@@ -1,35 +1,18 @@
-************************************************************************
-*                                                                      *
       subroutine setmat(iom,ierr)
-*                                                                      *
-*       set up the materials required for the problem.                 *
-*       Last modified by K.Niita on 2009/10/06                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       use moddas_material
       use moddas_tally
       implicit real*8 (a-h,o-z)
-
       parameter ( imfnmax=1000) ! T.Sato 2022/10/30
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       common /kmat1o/ iom1, iom2, iom3
-
       common /tall00/ itnm, ital(itlmax), itals(itlmax), italm(itlmax)
       common /tall33/ itln(itlmax,2), itli(itlmax,2), itlr(itlmax,2),
      &                rtdm(itlmax,2)
       common /fmcard/ ifm, ifmi(imfnmax,3)
       common /regcm/  icmg(kvlmax)
-
-
       common /eparm/  esmax, esmin, emin(20)
       common /kmat1k/ kmatd(kvlmax), kmate(kvlmax)
       common /kmat1h/ kmatg(kvlmax)
@@ -37,97 +20,51 @@
       common /kmat1g/ kmat(kvlmax)
       common /kmat1ka/ kmathd(kvlmax), kmathe(kvlmax)
       common /emode/  emodem, ge1, ge2, iemode ! frtati 2022/03/11
-
       common /ndemax/ dnmax(20)
       common /dpnmaxcom/ dpnmax ! frtati 2021/12/17
-
-*-----------------------------------------------------------------------
-
       character hs*10,ht*10,hb*30,hc*181
       integer, allocatable :: iturn(:) ! frtati 2021/12/17
-c
-*-----------------------------------------------------------------------
-*     change mat from material names to material indexes.
-*-----------------------------------------------------------------------
-
       do 30 i = 1, mxa
-
          do 10 j = 1, nmat
             if( nmt(j) .eq. mat(i) ) goto 20
    10    continue
-
             mat(i) = 0
             goto 30
-
    20    mat(i) = j
-
    30 continue
-
-*-----------------------------------------------------------------------
-
       do i = 1, mxa
-
          icmg(i) = mat(i)
-
       end do
-
-*-----------------------------------------------------------------------
-*     set up bremsstrahlung-biasing material flags.
-*-----------------------------------------------------------------------
-
       do 70 m = 1, nmat * kpt(3)
-
          if( mbi(m) .ge. 0 ) goto 70
          n = -mbi(m)
          mbi(m) = 0
-
    40    do 50 i = 1, nmat
    50    if( nmt(i) .eq. n ) goto 60
          goto 70
-
    60    n = -mbi(i)
          mbi(i) = 1
          if( n .gt. 0 ) goto 40
-
    70 continue
-
-*-----------------------------------------------------------------------
-*     set up the list of cross-section tables needed by the problem.
-*-----------------------------------------------------------------------
-
       mn = 1
-
       do 240 km = 1, mix
          if( km .ge. jmd(1+mn+1) ) mn = mn + 1
-
       do 230 m = 1, mipt
             if( kpt(m) .eq. 0 .and.
      &        ( m .ne. 3 .or. ides .ne. 0 .or. kpt(2) .eq. 0 ) )
      &         goto 230
-
-*-----------------------------------------------------------------------
-
          if( m .eq. 1 .or. m .eq. 9 ) then
-
                lem = km-jmd(1+mn)+1
-
             if( m .eq. 1 ) then
-
                   dsmax = das_kmate(kmate(mn)+(lem-1)*5+12)
                   izia = nint(das_kmatg(kmatg(mn)+(lem-1)*3+32))
                   if( dsmax .le. emin(2) ) goto 230
-
             else if( m .eq. 9 ) then
-
                   dsmax = das_kmate(kmate(mn)+(lem-1)*5+11)
                   izia = nint(das_kmatg(kmatg(mn)+(lem-1)*3+32))
                   if( dsmax .le. emin(1) ) goto 230
-
-
             end if
-
          end if
-
          if( m .eq. 31 .or. m .eq. 34 ) then
                lem = km-jmd(1+mn)+1
             if( m .eq. 31 ) then
@@ -140,155 +77,65 @@ c
                   if ( dsmax .le. emin(18) ) goto 230
             end if
          end if
-
-*-----------------------------------------------------------------------
-
       do 120 i = 1, mxa
-
   120 if( mat(i) .eq. mn .and.
      &  ( fim(m,i) .ne. 0. .or. m .eq. 3 .and.
      &    kpt(3) .eq. 0 .and. fim(2,i) .ne. 0 ) ) goto 150
-
-*-----------------------------------------------------------------------
-*     fm card
-*-----------------------------------------------------------------------
-*-----------------------------------------------------------------------
-*     DPA tally library
-*-----------------------------------------------------------------------
-
          do j = 1, 2
-
             if( ( j .eq. 1 .and. m .eq. 9 ) .or.
      &          ( j .eq. 2 .and. m .eq. 1 ) ) then
-
                do k = 1, itnm
-
                   if( itln(k,j) .gt. 0 ) then
-
                      do kk = 1, itln(k,j)
-
                         if( mlib(itli(k,j)+1,kk)
      &                     .eq. nmt(mn) ) goto 150
-
                      end do
-
                   end if
-
                end do
-
             end if
-
          end do
-
-*-----------------------------------------------------------------------
-*     FM card
-*-----------------------------------------------------------------------
-
       if( ifm .gt. 0 ) then
-
          do j = 1, ifm
-
             if( ifmi(j,1) .eq. m .and.
      &          ifmi(j,2) .eq. nmt(mn) ) goto 150
-
          end do
-
       end if
-
-*-----------------------------------------------------------------------
-
       goto 230
-
-*-----------------------------------------------------------------------
-*     identify this table, beginning with the zaid request.
-*-----------------------------------------------------------------------
-
   150 write(ht(1:7),'(i6,1h.)')iza(km)
       l = kmm(km)
       ht(8:10) = char(mod(l,256))//char(mod(l/256,256))//char(l/65536)
-
       if( m .eq. 9 ) goto 192
-
       if( m .eq. 31 ) goto 193
       if( m .eq. 34 ) goto 194
-
       if( m .gt. 3 ) goto 230
-
       goto (160,180,190) m
-
-*-----------------------------------------------------------------------
-*     neutron table.
-*-----------------------------------------------------------------------
-
   160 if( ht(8:10) .ne. ' ' .and.
      &    index('pgue',ht(10:10)) .eq. 0 ) goto 168
-
-*-----------------------------------------------------------------------
-*     if wrong particle, or nothing was specified, use a default.
-*-----------------------------------------------------------------------
-
       l = lxd(1,mn)
       ht(8:10) = char(mod(l,256))//char(mod(l/256,256))//char(l/65536)
-
   168 if( mcal .ne. 0 ) ht(10:10)='m'
       if( mcal .ne. 0 .or. ht(10:10) .eq. 'y' ) goto 200
       if( ht(10:10) .eq. 'm' ) ht(10:10) = 'c'
       if( ht(10:10) .eq. ' ' ) ht(10:10) = 'c'
 ! T.Sato 2021/08/30. kdr is not defined. In PHITS, extention **d cannot be used
-
       goto 200
-
-*-----------------------------------------------------------------------
-*     photoatomic table.
-*-----------------------------------------------------------------------
-
   180 ht(4:6) = '000'
       if( index('pg',ht(10:10)) .ne. 0 ) goto 185
-
-*-----------------------------------------------------------------------
-*     if not explicitly photons, use a photon default.
-*-----------------------------------------------------------------------
-
       l = lxd(2,mn)
       ht(8:10) = char(mod(l,256))//char(mod(l/256,256))//char(l/65536)
-
   185 if( mcal .ne. 0 ) ht(10:10) = 'g'
       if( mcal .eq. 0 ) ht(10:10) = 'p'
       goto 200
-
-*-----------------------------------------------------------------------
-*     electron table.
-*-----------------------------------------------------------------------
-
   190 ht(4:6) = '000'
       if( ht(10:10) .eq. 'e' ) goto 200
-
-*-----------------------------------------------------------------------
-*     if not explicitly electrons, use an electron default.
-*-----------------------------------------------------------------------
-
       l = lxd(3,mn)
       ht(8:10) = char(mod(l,256))//char(mod(l/256,256))//char(l/65536)
-
       goto 200
-
-*-----------------------------------------------------------------------
-*     proton table.
-*-----------------------------------------------------------------------
-
   192 continue
-
       if( ht(10:10) .eq. 'y' ) goto 200
       if( ht(10:10) .eq. 'h' ) goto 200
-
-*-----------------------------------------------------------------------
-*     if not explicitly protons, use a proton default.
-*-----------------------------------------------------------------------
-
       l = lxd(9,mn)
       ht(8:10) = char(mod(l,256))//char(mod(l/256,256))//char(l/65536)
-
-
   193 if( m .eq. 31 .and. mcal .eq. 0 ) then
         l = lxd(31,mn)
         ht(8:10) = char(mod(l,256))//char(mod(l/256,256))//char(l/65536)
@@ -297,74 +144,39 @@ c
         l = lxd(34,mn)
         ht(8:10) = char(mod(l,256))//char(mod(l/256,256))//char(l/65536)
       end if
-
-*-----------------------------------------------------------------------
-*     add the table to the list if it is not already there.
-*-----------------------------------------------------------------------
-
   200 do 210 i = 1, mxe
-
          call zaid(2,hs,ixl(1,i))
   210 if( hs .eq. ht ) goto 220
          mxe = mxe + 1
       if( mxe .gt. mxe1 ) then
-
          write(iom,'(''Error: material (mex) overflow in setmat 1'')')
          ierr = 1
          return
-
       end if
-
       call zaid(1,ht,ixl(1,i))
-
   220 lme(m,km) = i
   230 continue
   240 continue
-
-*-----------------------------------------------------------------------
-*     add the photonuclear table names.
-*-----------------------------------------------------------------------
-
       if( ispn .eq. 0 ) goto 248
-
          mn = 1
-
       do 247 km = 1, mix
-
          if( km .ge. jmd(1+mn+1) ) mn = mn + 1
          if( izn(km) .eq. 0 ) goto 247
-
-cfrtati 2022/03/25 only for used material
          do ii = 1, mxa
            if( mat(ii).eq.mn ) goto 241
          end do
          goto 247
   241    continue
-
          write(ht(1:7),'(i6,1h.)') izn(km)
          l = kmm(km)
-
          ht(8:10) = char(mod(l,256))//
      &              char(mod(l/256,256))//char(l/65536)
          if( index('u',ht(10:10)) .ne. 0 ) goto 242
-
-*-----------------------------------------------------------------------
-*     if not explicitly a photonuclear table, use a default.
-*-----------------------------------------------------------------------
-
       l = lxd(4,mn)
       ht(8:10) = char(mod(l,256))//char(mod(l/256,256))//char(l/65536)
-
-*-----------------------------------------------------------------------
-*     add the table to the list if it is not already there.
-*-----------------------------------------------------------------------
-
   242 do 244 i = 1, mxe
-
       call zaid(2,hs,ixl(1,i))
-
   244 if( hs .eq. ht ) goto 246
-
       mxe = mxe + 1
       i = mxe
       if(mxe.gt.mxe1) then
@@ -373,23 +185,13 @@ cfrtati 2022/03/25 only for used material
          return
       end if
       call zaid(1,ht,ixl(1,i))
-
   246 lmn(km) = i
   247 continue
-
-*-----------------------------------------------------------------------
-*     add the thermal s(a,b) table names.
-*-----------------------------------------------------------------------
-
   248 if( mcal .ne. 0 ) goto 262
-
       do 260 km = 1, indt
-
          call zaid(2,ht,kmt(1,km))
          ht(10:10) = 't'
-
          do 250 i = 1, mxe
-
             call zaid(2,hs,ixl(1,i))
             if( hs .eq. ht ) goto 260
             if( hs(1:6) .ne. ht(1:6) ) goto 250
@@ -397,12 +199,9 @@ cfrtati 2022/03/25 only for used material
             write(iom1,*)
      &      '## warning. '//ht//' and '//hs//
      &      ' are both present on mt cards.'
-
             if( hs(8:9) .eq. ' ' ) call zaid(1,ht,ixl(1,i))
             go to 260
-
   250    continue
-
          mxe = mxe + 1
          if( mxe .gt. mxe1 ) then
             write(iom,
@@ -410,26 +209,14 @@ cfrtati 2022/03/25 only for used material
             ierr = 1
             return
          end if
-
          call zaid(1,ht,ixl(1,mxe))
-
   260 continue
-
-*-----------------------------------------------------------------------
-*     put the list of cross-section tables in ascending order, for
-*     faster access to cross-section files in some circumstances.
-*-----------------------------------------------------------------------
   262 if( mxe .eq. 0 ) write(iom1,*)
      &         '## warning. '//
      &         'no cross-section tables are called for in this problem.'
-
       if( mxe .eq. 0 ) goto 325
-
-*-----------------------------------------------------------------------
       do 310 ie = 1, mxe
-
          do 300 je = ie + 1, mxe
-
             call zaid(2,hs,ixl(1,ie))
             mt = index(htn,hs(10:10))
             call zaid(2,ht,ixl(1,je))
@@ -437,56 +224,31 @@ cfrtati 2022/03/25 only for used material
             if( mt .lt. nt ) goto 300
             if( mt .gt. nt ) goto 270
             if( hs .le. ht ) goto 300
-
   270       do 280 i = 1, 3
                l = ixl(i,ie)
                ixl(i,ie) = ixl(i,je)
   280          ixl(i,je) = l
-
             do 290 i = 1, mipt
             do 290 j = 1, mix
-
                l = lme(i,j)
                if( l .eq. ie ) lme(i,j) = je
   290          if( l .eq. je ) lme(i,j) = ie
-
             if( ispn .eq. 0 ) goto 300
-
             do 295 i = 1, mix
                 l = lmn(i)
                 if( l .eq. ie ) lmn(i) = je
   295           if( l .eq. je ) lmn(i) = ie
-
   300    continue
-
   310 continue
-
-*-----------------------------------------------------------------------
-*     check for near duplicates.
-*-----------------------------------------------------------------------
-
       do 320 i = 1, mxe - 1
-
          call zaid(2,hs,ixl(1,i))
          call zaid(2,ht,ixl(1,i+1))
-
   320    if( hs(1:6) .eq. ht(1:6) .and. hs(10:10) .eq. ht(10:10) )
      &   write(iom1,*)
      &   '## warning. '//hs//' and '//ht//' are both called for.'
-
-*-----------------------------------------------------------------------
-*     put cross-section directory file information in ixc.
-*-----------------------------------------------------------------------
-
   325 call jxsdir(i,iom,ierr)
-
       if( ierr .ne. 0 ) return
       if( i .eq. 1 ) return
-
-*-----------------------------------------------------------------------
-*     set data max if ACE files are missing ! frtati 2021/12/17
-*-----------------------------------------------------------------------
-
       i1_flag = 0
       allocate(iturn(1:mxe))
       mxe_reduce = 0
@@ -501,10 +263,7 @@ cfrtati 2022/03/25 only for used material
         end if
         iturn(i) = i - mxe_reduce
       end do
-
       if ( i1_flag.eq.1 ) then ! set data max
-
-c data max for neutron library
       i2_flag = 0
       mn = 1
       do km = 1, mix
@@ -568,8 +327,6 @@ c data max for neutron library
           das_kmatd(kmatd(m)+4) = t2_dmax
         end do
       end if
-
-c data max for proton, deuteron, alpha libraries
       i2_flag = 0
       do m = 1, mipt
         if ( m.eq.2 .or. m.eq.3 .or.
@@ -660,8 +417,6 @@ c data max for proton, deuteron, alpha libraries
           das_kmathd(kmathd(m)+6) = t6_dmax
         end do
       end if
-
-c data max for photo-nuclear library
       if( ispn.eq.1 ) then
         i2_flag = 0
         mn = 1
@@ -711,7 +466,6 @@ c data max for photo-nuclear library
           end do
         end if
       end if
-
       do i = 1, mxe
         if ( iturn(i).ne.0 ) then
           nty(iturn(i)) = nty(i)
@@ -720,12 +474,8 @@ c data max for photo-nuclear library
         end if
       end do
       mxe = mxe - mxe_reduce
-
       end if
-
       deallocate(iturn)
-
-cfrtati 2022/03/11 disable high-energy e-mode for 1H target
       if( iemode.ne.0 ) then
         do iex = 1, mxe
           mn = 1
@@ -754,259 +504,122 @@ cfrtati 2022/03/11 disable high-energy e-mode for 1H target
           end do
         end do
       end if
-
-*-----------------------------------------------------------------------
-*     read the neutron atomic weights and the temperatures.
-*-----------------------------------------------------------------------
-
       do 350 i = 1, mxe
          hc=' '
          call zaid(2,hc,ixc(1,i))
-
          do 330 j = 11, 181
   330    hc(j:j) = char(mod(ixc((j+1)/3,i)/256**mod(j+1,3),256))
-
          call nxtsym(hc,' ',11,it,iu,1)
-
          if( iu .eq. 0 ) goto 350
-
          hb = hc(it:iu)
          read(hb,'(bn,e30.0)') awn(i)
          if( nty(i) .gt. 2 ) goto 350
-
       do 340 j = 3, 10
          call nxtsym(hc,' ',iu+1,it,iu,1)
   340    if( iu .eq. 0 ) goto 350
-
          hb = hc(it:iu)
          read(hb,'(bn,e30.0)') tbt(i)
-
-*-----------------------------------------------------------------------
-*     look for unresolved resonance probability tables.
-*-----------------------------------------------------------------------
-
       do 345 j = 11, 15
          call nxtsym(hc,' ',iu+1,it,iu,1)
          if( iu .eq. 0 ) goto 350
-
   345    if( hc(it:iu) .eq. 'ptable' ) iunr = iunr + 1
-
   350    continue
-
          if( iunr .ge. 100000 ) iunr = 0
-
-*-----------------------------------------------------------------------
-*     atomic weights from awtab card always override table values.
-*-----------------------------------------------------------------------
-
       do 360 j = 1, naw
       do 360 km = 1, mix
-
          if( iza(km) .ne. kaw(j) ) goto 360
          awc(km) = awt(j)
          if( lme(1,km) .ne. 0 )
      &       awn(lme(1,km)) = awt(j)
-
   360 continue
-
-*-----------------------------------------------------------------------
-*     calculate the thermal g-function table.
-*-----------------------------------------------------------------------
-
          b = 1. / sqrt(pie)
          thgf(0) = 2. * b
-
       do 370 i = 1, 50
-
          a = i * .04
-
   370    thgf(i) = ( a + .5 / a ) * erf2(a) + b * exp( -a**2 )
-
-*-----------------------------------------------------------------------
-*     set pointers for the summary of nuclide activity.
-*-----------------------------------------------------------------------
-
          ipan(1) = 1
-
       do 380 i = 1, mxa
   380    ipan(i+1) = ipan(i) + npq(mat(i))
-
-*-----------------------------------------------------------------------
-*     convert mass densities to atom densities.
-*     modify the problem to run with all voids if required.
-*-----------------------------------------------------------------------
-
       call masatm(iom,ierr)
       if( ierr .ne. 0 ) return
-
-
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-************************************************************************
-*                                                                      *
       subroutine jxsdir(jc,iom,ierr)
-*                                                                      *
-*       match the table names in xlist with xs cards and with entries  *
-*       in the cross-section tables directory file xsdir.              *
-*       return with jc=1 if xsdir does not exist.                      *
-*                                                                      *
-*       Last modified by K.Niita on 2009/10/06                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       use moddas_material
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
       include 'err.inc'
-
-*-----------------------------------------------------------------------
 ! T.Sato 2018/08/28, default value of hdpth
       common /paran/ icfn(100), ilfn(100), chfn(100)
       character chfn*200
-
       common /kmat1o/ iom1, iom2, iom3
       common /dircha/ idirch
       character yen*1
-
       common /kmat1k/ kmatd(kvlmax), kmate(kvlmax) ! frtati 2022/03/28
-
-*-----------------------------------------------------------------------
       integer, allocatable :: inlibflg(:) ! frtati 2023/3/6
-
       common /nlibcom/ nlibdef ! T.Sato 2023/12/26, read from natural_abundance.dat
       character*2 nlibdef
-
 !      character*2 :: nlibdef = '50' ! frtati 2021/12/17 20MeV neutron default
       character ha*1,hb*30,hc*181,hd*10,hl*281,hn*13,hs*10,ht*10,hz*10 ! T.Sato 2023/08/22
       yen  = char(92)
-
-*-----------------------------------------------------------------------
       hdpth=chfn(1)(1:ilfn(1))//'/XS' ! default value of datapath in xsdir
       allocate(inlibflg(mxe)) ! frtati 2023/3/6
-
       iuo = iom1
-
-*-----------------------------------------------------------------------
-*     match the xs cards.
-*-----------------------------------------------------------------------
-
       jc = 0
       nx = 0
-
-*-----------------------------------------------------------------------
-
       do 90 ie = 1, nxsc
-
-*-----------------------------------------------------------------------
-
          if( nty(ie) .gt. 0 ) goto 90
-
    10    if( nx .eq. nxsc ) goto 92
-
          hc = ' '
          call zaid(2,hc,ixc(1,ie))
-
          do 20 j = 11, 181
    20    hc(j:j) = char(mod(ixc((j+1)/3,ie)/256**mod(j+1,3),256))
-
          hz = hc(1:10)
          ha = hc(10:10)
          nt = index(htn,ha)
          do 30 je = 1, mxe
-
             if( nty(je) .ne. 0 ) goto 30
             call zaid(2,ht,ixl(1,je))
             if( ht(1:7) .ne. hz(1:7) ) goto 30
             if( ht(8:9) .ne. hz(8:9) .and.
      &          ht(8:9) .ne. ' ' ) goto 30
             if( ht(10:10) .eq. ha ) goto 40
-
-*-----------------------------------------------------------------------
-*        if a 'c' table matches a 'd' request, hold it in case of no 'd'
-*-----------------------------------------------------------------------
-
             if( nt .eq. 1 .and.
      &          ht(10:10) .eq. 'd' ) nty(je) = -1
             if( nty(je) .lt. 0 ) goto 50
-
    30    continue
-
-*-----------------------------------------------------------------------
-*     match not found.  xs card unused.
-*-----------------------------------------------------------------------
-
          if(ixc(61,ie).gt.0)
      &      write(iom1,'(
      &      '' ## warning. table on xs'',i3,
      &      '' card is not used in this problem.'')')
      &      ixc(61,ie)
-
          ixc(61,ie) = -abs(ixc(61,ie))
-
          goto 90
-
-*-----------------------------------------------------------------------
-*     ixl entry je matches ixc entry ie.
-*-----------------------------------------------------------------------
-
    40    call zaid(1,hz,ixl(1,je))
          nty(je) = nt
          nx = nx + 1
-*-----------------------------------------------------------------------
-*     load atomic weight ratio awc if not s(alpha,beta).
-*-----------------------------------------------------------------------
-
          if( kdata(hc(1:6)) .ne. 2 ) goto 50
          read(hc,'(bn,i6)') iz
          call nxtsym(hc,' ',11,it,iu,1)
-
          if( iu .eq. 0 ) goto 50
          hb = hc(it:iu)
          read(hb,'(bn,e30.0)') a
-
          do 48 im = 1, mix
    48    if( iza(im) .eq. iz ) awc(im) = a
-
-*-----------------------------------------------------------------------
-*     move ixc entries at ie to corresponding ixl entries at je.
-*-----------------------------------------------------------------------
-
    50    if( je .eq. ie ) goto 90
          do 60 i = 1, 61
             j = ixc(i,je)
             ixc(i,je) = ixc(i,ie)
    60       ixc(i,ie) = j
-
-*-----------------------------------------------------------------------
-*     if new ie (old je) entry is xs card, ensure it is processed.
-*-----------------------------------------------------------------------
-
          if( je .gt. ie .and. ixc(61,ie) .gt. 0 ) goto 10
-
-*-----------------------------------------------------------------------
-
    90 continue
-
    92 if( mxe .gt. 0 .and. nx .eq. mxe ) goto 490
-
-*-----------------------------------------------------------------------
-*     open the cross-section directory file.
-*-----------------------------------------------------------------------
-
       jc = 1
       hl = xsdir
       if( inqire(hl) .eq. 1 ) goto 95
-
       if( idirch .eq. 0 ) then
          if( leng(hdpath) .gt. 0 )
      &         hl = hdpath(1:leng(hdpath))//'/'//xsdir
@@ -1014,10 +627,8 @@ cfrtati 2022/03/11 disable high-energy e-mode for 1H target
          if( leng(hdpath) .gt. 0 )
      &         hl = hdpath(1:leng(hdpath))//yen//xsdir
       end if
-
       if( inqire(hl) .eq. 1 ) goto 95
          hdpath = hdpth
-
       if( idirch .eq. 0 ) then
          if( leng(hdpth) .gt. 0 )
      &         hl = hdpth(1:leng(hdpth))//'/'//xsdir
@@ -1025,297 +636,177 @@ cfrtati 2022/03/11 disable high-energy e-mode for 1H target
          if( leng(hdpth) .gt. 0 )
      &         hl = hdpth(1:leng(hdpth))//yen//xsdir
       end if
-
       if( inqire(hl) .eq. 1 ) goto 95
-
-
-
        write(ErrCha,'(''Error: cannot find file(7): '',a)')
      & chfn(7)(1:ilfn(7))
        ErrID = 'L:1035/R:jxsdir/F:ggm02.f' !E02_001_001
        call ErrWriteIO(ErrID,ErrCha,iom)
        call ErrWrite(ErrID,ErrCha)
-
          ierr = 1
          return
-
-*-----------------------------------------------------------------------
-
    95 jc = 2
       open(iud,file=hl,status='old')
       rewind iud
-
-*-----------------------------------------------------------------------
-*     check for data beyond column 80.
-*-----------------------------------------------------------------------
-
    96 read(iud,'(a132)',err=98,iostat=ios) hc
       if( ios .eq. -1 ) goto 98
       if( hc(131:132) .eq. ' ' ) goto 96
-
       write(iom,'(a70)')hc(1:70)
-
          write(ErrCha,'(''Error: xsdir file data beyond column 131.'')')
          ErrID = 'L:1059/R:jxsdir/F:ggm02.f'
          call ErrWrite(ErrID,ErrCha)
-
          ierr = 1
          return
-
    98 rewind iud
-
-*-----------------------------------------------------------------------
-*     read the atomic weights for converting densities.
-*-----------------------------------------------------------------------
-
   100    read(iud,'(a130)',iostat=ios) klin
          if( ios .eq. -1 ) goto 160
          hn = klin(1:13)
          call nxtsym(hn,' ',1,i,j,2)
-
          if( hn .eq. 'atomic weight' ) goto 105
          if( hn(1:8) .ne. 'datapath' ) goto 100
-
          call nxtsym(klin,' =',9,i,j,0)
          if( j .ne. 0 .and. klin(i:i) .eq. '=' )
      &   call nxtsym(klin,' =',j+1,i,j,0)
          if( j .ne. 0 ) hdpth = klin(i:j)
          goto 100
-
   105    iu = 0
   110    read(iud,'(a130)',iostat=ios) klin
          if( ios .eq. -1 ) goto 170
   120    call nxtsym(klin,' ',iu+1,it,iu,1)
-
          if( iu .eq. 0 ) goto 110
          if( kdata(klin(it:iu)) .eq. 0 ) goto 170
          hb = klin(it:iu)
          read(hb,'(bn,i30)') i
-
   130    call nxtsym(klin,' ',iu+1,it,iu,1)
          if( iu .ne. 0 ) goto 140
          read(iud,'(a130)',iostat=ios) klin
          if( ios .eq. -1 ) goto 360
          goto 130
-
   140    hb = klin(it:iu)
          read(hb,'(bn,e30.0)') a
-
       do 150 j = 1, mix
   150    if( iza(j) .eq. i ) awc(j) = a
-
          goto 120
   160    continue
-
          write(iom,'(''Error: cross-section directory file '',
      &               '' has no atomic weights table.'')')
          ierr = 1
          return
-
-*-----------------------------------------------------------------------
-*     read the next directory file entry.
-*-----------------------------------------------------------------------
-
   170    if( mxe .eq. 0 ) goto 470
          if( klin .eq. 'directory' ) goto 190
          rewind iud
-
   180    read(iud,'(a130)',iostat=ios) klin
          if( ios .eq. -1 ) goto 360
          call nxtsym(klin,' ',1,i,j,2)
          if( klin .ne. 'directory' ) goto 180
-
   190    na = 0
          nb = 0
          hl = ' '
          hd = ' '
-
   200    iu = 0
          read(iud,'(a130)',iostat=ios) klin
          if( ios .eq. -1 ) goto 370
-
   210    if( na .eq. 0 ) call nxtsym(klin,' ',iu+1,it,iu,1)
          if( na .ne. 0 ) call nxtsym(klin,' ',iu+1,it,iu,0)
          if( iu .eq. 0 ) goto 240
-
          if( klin(it:iu) .eq. 'obsolete' ) nb = 1
          if( klin(it:iu) .eq. 'obsolete' .or.
      &       klin(it:iu) .eq. '+' ) goto 200
-
          na = na + 1
-
          if( na .gt. 1 ) goto 220
          i = index(klin(it:iu),'.')
          if( i .eq. 0 ) goto 190
          hl(8-i:10) = klin(it:iu)
          ic = 10
          goto 210
-
   220    if( na .gt. 10 .and. klin(it:iu) .ne. 'ptable' ) goto 230
          hl(ic+2:ic+iu-it+2) = klin(it:iu)
          ic = ic + iu - it + 2
          goto 210
-
   230    i = index(klin(it:iu),'/')
          j = index(klin(min(iu,it+i):iu),'/')
          if( ( i .eq. 2 .or. i .eq. 3 ) .and.
      &       ( j .eq. 2 .or. j .eq. 3 ) ) hd = klin(it:iu)
          goto 210
-
   240    hz = hl(1:10)
          ha = hz(10:10)
-
-
-*-----------------------------------------------------------------------
-*     look for a match with the directory file entry.
-*-----------------------------------------------------------------------
-
          inlibflg = 0 ! frtati 2021/12/17
   250    do 260 je = 1, mxe
-
-cfrtati 2023/3/6 add dimension of inlibflg for bugfix
             if( nty(je) .gt. 0 .or. inlibflg(je).eq.1 ) goto 260 ! frtati 2021/12/17
             call zaid(2,hs,ixl(1,je))
             if( hs(1:7) .ne. hz(1:7) .or. hs(10:10) .ne. ha ) goto 260
             if( hs(8:9) .eq. hz(8:9) .or. hs(8:9) .eq. ' ' )  goto 290
-cfrtati 2021/12/17 hold 20MeV neutron default for high-energy file request
             if( ha.eq.'c' .and. hz(8:9).eq.nlibdef ) then
               nty(je) = -10
               inlibflg(je) = 1
               goto 300
             end if
-
   260    continue
-
-*-----------------------------------------------------------------------
-*     if a 'c' table matches a 'd' request, hold it in case no 'd'
-*     table is found.
-*-----------------------------------------------------------------------
-
          if( kdr(1) .eq. 0 .or. ha .ne. 'c' ) goto 190
-
          do 270 je = 1, mxe
-
             if( nty(je) .ne. 0 ) goto 270
             call zaid(2,ht,ixl(1,je))
-
             if( ht(1:7) .ne. hz(1:7) .or. ht(10:10) .ne. 'd' ) goto 270
             if( ht(8:9) .eq. hz(8:9) .or. ht(8:9) .eq. ' ' )   goto 280
-
   270    continue
-
          goto 190
-
   280    nty(je) = -1
          goto 300
-
-*-----------------------------------------------------------------------
-*     a match has been found. load the directory entry.
-*-----------------------------------------------------------------------
-
   290    nty(je) = index(htn,ha)
          call zaid(1,hz,ixl(1,je))
          nx = nx + 1
-
   300    do 310 i = 1, 10
             n = index('0123456789/',hd(i:i))
   310       if( n .ne. 0 ) kxd(je) = 11 * kxd(je) + n
-
          kxs(je) = nb
-
          do 320 i = 1, 61
   320       ixc(i,je) = 0
-
          call zaid(1,hl,ixc(1,je))
-
          do 330 i = 11, 181
   330       ixc((i+1)/3,je) = ixc((i+1)/3,je)
      &                           + ichar(hl(i:i)) * 256**mod(i+1,3)
-
          if( nx .eq. mxe ) goto 385
          goto 250
-
-*-----------------------------------------------------------------------
-*     unexpected eof in xsdir file.
-*-----------------------------------------------------------------------
-
   360    write(iom,'(
      & ''Error: bad data in cross-section directory file'')')
          ierr = 1
          return
-
-*-----------------------------------------------------------------------
-*     try to change any unmatched d tables to c.
-*-----------------------------------------------------------------------
-
   370    do 380 ie = 1, mxe
             if( nty(ie) .ge. 0 .or. nty(ie).eq.-10 ) goto 380 ! frtati 2021/12/17
-
             call zaid(2,ht,ixl(1,ie))
             call zaid(2,hs,ixc(1,ie))
             call zaid(1,hs,ixl(1,ie))
-
            nty(ie) = 1
            nx = nx + 1
-
            write(iom1,*) '## warning. '//
      &     'continuous-energy cross-section table used for '//ht
-
   380    continue
-
-*-----------------------------------------------------------------------
-*     check for duplicate entries.
-*-----------------------------------------------------------------------
-
   385    ie = 0
   390    if( ie .eq. mxe ) goto 470
          ie = ie + 1
          call zaid(2,ht,ixl(1,ie))
-
   400    do 410 je = ie + 1, mxe
             call zaid(2,hz,ixl(1,je))
   410       if( hz .eq. ht ) goto 420
-
          goto 390
-
-*-----------------------------------------------------------------------
-*     eliminate duplicate entries.
-*-----------------------------------------------------------------------
-
   420    do 430 m = 1, mix
          do 430 i = 1, mipt
            if( lme(i,m) .eq. je ) lme(i,m) = ie
   430      if( lme(i,m) .gt. je ) lme(i,m) = lme(i,m) - 1
-
          do 435 m = 1, mix
             if( lmn(m) .eq. je ) lmn(m) = ie
   435       if( lmn(m) .gt. je ) lmn(m) = lmn(m) - 1
-
          do 460 ke = je, mxe - 1
          do 440 i = 1, 3
   440       ixl(i,ke) = ixl(i,ke+1)
-
          do 450 i = 1, 61
   450       ixc(i,ke) = ixc(i,ke+1)
-
             kxd(ke) = kxd(ke+1)
             kxs(ke) = kxs(ke+1)
-
   460       nty(ke) = nty(ke+1)
             mxe = mxe - 1
             nx = nx - 1
-
          goto 400
-
-*-----------------------------------------------------------------------
-*     print lists of missing tables.
-*-----------------------------------------------------------------------
   470    if( nx .eq. mxe ) goto 490
-
-cfrtati 2021/12/17 error comment out
-
-
-cfrtati 2021/12/17 error comment out. added messages for missing files
          i1_erflg = 0
          do ie = 1, mxe
           if( nty(ie) .eq. 0 ) then
@@ -1361,79 +852,30 @@ cfrtati 2021/12/17 error comment out. added messages for missing files
            write(*,'("These nuclear data libraries are missing. ",
      &     " JENDL-4.0 is used for these nuclei up to 20MeV.")')
          end if
-
          np = 0
-
-cfrtati 2021/12/17 error comment out.
-
-
-
-
-
          do 475 i = 1, mix
   475       if( lmn(i) .eq. ie ) izn(i) = 0
-
   480    continue
-
-cfrtati 2021/12/17 error comment out
-C - dmax(1) Check ----------------------
-C --------------------------------------
-
-
-
-*-----------------------------------------------------------------------
-*     print list of obsolete tables.
-*-----------------------------------------------------------------------
-
   490    do 500 ie = 1, mxe
-
             if( kxs(ie) .eq. 0 ) goto 500
             call zaid(2,ht,ixl(1,ie))
-
             write(iom1,*)
      &      '## warning. '//ht//
      &      ' is an obsolete table to be eliminated soon.'
-
   500    continue
-
          if( jc .ne. 0 ) close(iud)
-
-*-----------------------------------------------------------------------
       deallocate(inlibflg) ! frtati 2023/3/6
-
       return
       end
-
-************************************************************************
-*                                                                      *
       subroutine masatm(iom,ierr)
-*                                                                      *
-*       convert mass densities to atom densities.  print the materials.*
-*                                                                      *
-*       Last modified by K.Niita on 2009/10/06                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
       include 'err.inc'
-
-*-----------------------------------------------------------------------
-
       common /kmat1o/ iom1, iom2, iom3
-
-*-----------------------------------------------------------------------
-
       character ht*82,hm*6
-
-*-----------------------------------------------------------------------
-
       dimension rmasd(100)
       save rmasd
       data ( rmasd(i), i = 1, 100 )
@@ -1457,49 +899,28 @@ C --------------------------------------
      &220.11100000,221.08400000,224.08400000,225.05000000,230.04473032,
      &229.05115957,235.98411575,235.01200000,241.96800000,240.91200000,
      &244.87800000,244.87800000,248.84400000,251.81800000,254.79200000/
-
-*-----------------------------------------------------------------------
-
       iuo = iom1
       ink(40) = 1
-
       if(ink(40).ne.0)write(iuo,10)
    10 format(/'*** material composition : the sum of the fractions'/)
       nl = 13
-
-*-----------------------------------------------------------------------
-*     do all of the materials.
-*-----------------------------------------------------------------------
-
       nu = 0
       nd = 0
       nr = 0
-
       do 100 im = 1, nmat
-
-*-----------------------------------------------------------------------
-*     convert mass fractions to atom fractions.
-*-----------------------------------------------------------------------
-
          su = 0.
          sf = 0.
          sw = 0.
-
          do 20 m = jmd(1+im), jmd(1+im+1) - 1
             a = awc(m)
             write(hm,'(i6)') iza(m)
-
             if(a.eq.0.) then
-
                izza = iza(m) / 1000
-
                if( izza .gt. 100 ) then
-
                 ErrCha = ''
                 ErrID = 'L:1499/R:masatm/F:ggm02.f' !E04_003_001
                 call ErrWriteIO(ErrID,ErrCha,iom)
                 call ErrWrite(ErrID,ErrCha)
-
                 write(iom,'(''Atomic weight of '',a6,'' is zero.'')') hm
                 write(iom,'(''Please try natural=0 in [parameters] ''
      &                   ''section.'')')
@@ -1508,34 +929,18 @@ C --------------------------------------
      &                   ''section.'')')
                 ierr = 1
                 return
-
                end if
-
                a = rmasd(izza)
                awc(m) = a
-
             end if
-
             su = su + fme(m)
             if( fme(m) .lt. 0. ) fme(m) = -fme(m) / a
             sf = sf + fme(m)
    20       sw = sw + fme(m) * a
-
-*-----------------------------------------------------------------------
-*     normalize the atom fractions.
-*-----------------------------------------------------------------------
-
          do 30 m = jmd(1+im), jmd(1+im+1) - 1
    30       fme(m) = fme(m) / sf
-
-*-----------------------------------------------------------------------
-*     convert mass densities of the cells to atom densities.
-*-----------------------------------------------------------------------
-
          de = 0.
-
          do 40 i = 1, mxa
-
             if( mat(i) .ne. im ) goto 40
             if( rho(i) .lt. 0. )
      &      rho(i) = -rho(i) * (avgdn*sf/sw)
@@ -1543,245 +948,126 @@ C --------------------------------------
             if( den(i) .gt. 40. ) nr = nr + 1
             if( de .eq. 0. ) de = rho(i)
             if( abs( de - rho(i) ) .gt. 1.e-6 ) de = -1.
-
    40    continue
-
-*-----------------------------------------------------------------------
-c        convert rho*x entries on fm cards to atom densities.
-
-*-----------------------------------------------------------------------
-*     print warnings about unusual fractions and densities.
-*-----------------------------------------------------------------------
-
       fc = abs(1.-abs(su))
       dc = abs(1.-de/sf)
       if( su .lt. 0. ) dc = abs(1.-de/sf/avgdn)
       if( min(fc,dc) .lt. .00001 ) goto 90
       nu = nu + 1
-
       if( ink(40) .ne. 0 ) write(iuo,80) nmt(im), abs(su)
    80 format(' the sum of the fractions of material',i5,' was',
      &       1pe13.6)
-
    90 if( de .lt. 0. ) nd = nd + 1
   100 if( de .lt. 0. .and. ink(40) .ne. 0 ) write(iuo,110) nmt(im)
   110 format(/34h not all cells containing material,i5,
      & 23h have the same density.)
-
-*-----------------------------------------------------------------------
-*     print table of material compositions (atom fractions).
-*-----------------------------------------------------------------------
-
       if( ink(40) .eq. 0 ) goto 230
-
       write(iuo,120)
   120 format(/9h material/
      & 8h  number,5x,32hcomponent nuclide, atom fraction)
-
       do 170 im = 1, nmat
          write(iuo,130) nmt(im)
   130    format(i6)
          write(iuo,131) (iza(m),fme(m),
      &      m = jmd(1+im),jmd(1+im+1)-1)
   131    format((i22,1h,,e12.5))
-
          ht = ' '
          l = 1
-
          do 150 m = 1, indt
             if( jmt(m) .ne. nmt(im) ) goto 150
             call zaid(2,ht(l:l+9),kmt(1,m))
             ht(l+9:l+9) = 't'
             l = l + 12
   150    continue
-
          if( l .ne. 1 ) write(iuo,160) ht
   160    format(10x,37h associated thermal s(a,b) data sets:,2x,a82)
-
   170    nl = nl + ( ( npq(im)+3) / 4 ) * 2 + min(1,l-1)
-
-*-----------------------------------------------------------------------
-*     print table of material compositions (mass fractions).
-*-----------------------------------------------------------------------
-
       if( 2 * (nu+nd) + nl .lt. 58 ) write(iuo,'(/9h material)')
       if( 2 * (nu+nd) + nl .ge. 58 ) write(iuo,180)
   180 format(' material')
       write(iuo,190)
   190 format(8h  number,5x,32hcomponent nuclide, mass fraction)
-
       do 210 im = 1, nmat
          sw = 0.
-
          do 200 m = jmd(1+im), jmd(1+im+1) - 1
   200    sw = sw + fme(m) * awc(m)
-
          write(iuo,130) nmt(im)
   210    write(iuo,131) ( iza(m),
      &    fme(m) * awc(m) / sw,
      &    m = jmd(1+im), jmd(1+im+1) - 1 )
-
-*-----------------------------------------------------------------------
-*     print warning messages.
-*-----------------------------------------------------------------------
-
   230 continue  ! do not output warning, T.Sato 2022/03/20
-
       if(nd.ne.0) write(iom1,'('' ## warning. '',i3,
      & '' of the materials appear at more than one density.'')') nd
-
       if(nr.ne.0) write(iom1,'('' ## warning. '',i3,
      & '' cell densities are greater than 40 gram/cc.'')') nr
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-
-************************************************************************
-*                                                                      *
       subroutine setxst(iom,jom,ierr) ! S.H. added jom (2017.1.4)
-*                                                                      *
-*       set up the cross-section tables.                               *
-*                                                                      *
-*       Last modified by K.Niita on 2009/10/06                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       common /kmat1o/ iom1, iom2, iom3
-
-*-----------------------------------------------------------------------
-
       character hm*5,ht*10,hz*10
-
-*-----------------------------------------------------------------------
-
       common /paraj/  mstz(300), parz(300)
-
       iuo = iom1
       ink(102) = 1
-
-*-----------------------------------------------------------------------
-*     offset lxs by 1 at start so that kxspen(1)=jxs((1,1)-1 > 0
-*     to make cross section plot work.
-*-----------------------------------------------------------------------
-
       lxs=1
-
-*-----------------------------------------------------------------------
-*     create runtpe.  get the cross-section tables.
-*-----------------------------------------------------------------------
-
-
          nt = 0
       ihtnele = index(htn,'e')
       do 10 i = 1, mxe
    10 if( nty(i) .eq. ihtnele ) nt = nt + 1  ! electron data should be always the last
-
          mxe = mxe - nt
-
          call tapefl(1)
          call ALLOCATE_IXS(mixs,maxsec,mxe,nt)
-
       if( mxe .ne. 0 ) then
          call getxst(0,iom,jom,ierr) ! S.H. added jom (2017.1.4)
          if( ierr .ne. 0 ) return
       end if
-
       if( nt .ne. 0 ) then
          call getxst(nt,iom,jom,ierr) ! S.H. added jom (2017.1.4)
          if( ierr .ne. 0 ) return
       end if
-
 ! T.Sato 2021/09/01, no nuclear & atomic data are used
       if(mxe.eq.0.and.nt.eq.0) then
        mbmemory = lxss+npikmt+4
        allocate(xss(int(mbmemory*parz(201))),  ! default value of parz(201)=1.0 because mbmemory is conservative estimate
      &          exs(int(mbmemory*parz(201))))  ! T.Sato 2021/09/01
       endif
-
-*-----------------------------------------------------------------------
-*     set up particle energy grids.
-*-----------------------------------------------------------------------
-
       if( nt .ne. 0 ) then
          call xstel(nt,iom,ierr)
          if( ierr .ne. 0 ) return
       end if
       if( ierr .ne. 0 ) return
-
-*-----------------------------------------------------------------------
-*     print assignment of s(a,b) data to nuclides.
-*-----------------------------------------------------------------------
-
       if( indt .eq. 0 .or. ink(102) .eq. 0 ) goto 18
-
          write(iuo,12)
    12    format(/'*** assignment of s(a,b) data to nuclides.',/
      &          7x,3hmat,8x,7hnuclide,9x,6hs(a,b))
-
       do 16 i = 1, nmat
-
          write(hm,'(i5)') nmt(i)
-
       do 14 m = jmd(1+i), jmd(1+i+1) - 1
-
          if( lmt(m) .eq. 0 ) goto 14
-
          call zaid(2,hz,ixl(1,lme(1,m)))
          call zaid(2,ht,ixl(1,lmt(m)))
          write(iuo,'(5x,a5,5x,a10,5x,a10)') hm, hz, ht
          hm = ' '
-
    14 continue
    16 continue
-
-*-----------------------------------------------------------------------
-*     print table of use of dynamically allocated storage.
-*-----------------------------------------------------------------------
-
    18 if(mxe.le.16) write(iuo,20)
    20 format(/'*** decimal words of dynamically allocated storage')
-
       if(mxe.gt.16) write(iuo,30)
    30 format(/'*** decimal words of dynamically allocated storage')
-
       nd = 1
       nd = ndp2
       lgbn = lxss
-
       if( mct .ge. 0 ) write(iuo,40) lxs*nd, (lxs)*nd, (lxs)*nd*8/ndp2
    40 format(5x,
      & 14hcross sections,i12/5x,5htotal,i21,5x,1h=,i12,6h bytes)
-
-
-
-
-*-----------------------------------------------------------------------
-*     read all the cross-section tables back in, and write the fixed
-*     data and the first dump.
-*-----------------------------------------------------------------------
       if( nfer .ne. 0 .and. lfatl .eq. 0 ) return
       call tapefl(8)
-
-*-----------------------------------------------------------------------
-*     check if addresses are too large for integer arithmetic.
-*-----------------------------------------------------------------------
-
       xss(lxss+lxs+1) = jxs(1,mxe) + nxs(1,mxe)
       i = xss(lxss+lxs+1)
-
       if( jxs(1,mxe) + nxs(1,mxe) .ne. i ) then
          write(iom,'(/
      &       ''ERROR : problem too large for single precision xsecs.''
@@ -1789,74 +1075,35 @@ c        convert rho*x entries on fm cards to atom densities.
          ierr = 1
          return
       end if
-
-*-----------------------------------------------------------------------
-*     write the initial kcode source to the srctp file.
-*-----------------------------------------------------------------------
-
       return
       end
-
-************************************************************************
-*                                                                      *
       subroutine getxst(nt,iom,jom,ierr)
-*                                                                      *
-*       get the cross-section tables.                                  *
-*       nt=0 get neutron and photon tables.  nt>0 get electron tables. *
-*                                                                      *
-*       Last modified by K.Niita on 2010/01/12                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       common /kmat1o/ iom1, iom2, iom3
       common /dircha/ idirch
-
       common /egsemi/ iegsemi, iegsout
       common /paraj/  mstz(300), parz(300)
-
       character yen*1
-
-*-----------------------------------------------------------------------
-
       character ha*281,hc*181,hd*10,hf*64,hk*70,hm*10,hp*10,hr*70,ht*10 ! T.Sato 2023/08/22
       dimension iq(3),iz(0:16),ly(5)
-
       data ifirst/0/
-
       yen  = char(92)
-
-*-----------------------------------------------------------------------
-
       iuo = iom1
-
-*-----------------------------------------------------------------------
-*     expand the field length to accomodate the largest table.
-*-----------------------------------------------------------------------
-
       et = huge
       em = 0.
       ih = 0
       th = 0.
       mb = 0
-
       lp = lxss
       if( nt .ne. 0 ) lp = lexs
       kf = 0
       jb = 1
       if( nt .ne. 0 ) jb = mxe + 1
-
       if(ifirst.eq.0) mbmemory=0 ! T.Sato 2021/09/01. Conservative estimate of the max memory space
-
       do 40 i = jb, mxe+nt
             call zaid(2,hc,ixc(1,i))
          do 10 j = 11, 181
@@ -1871,19 +1118,16 @@ c        convert rho*x entries on fm cards to atom densities.
             if(ifirst.eq.0) mbmemory=mbmemory+m ! T.Sato 2021/09/01
             if( nt .eq. 0 ) mb = max(mb,m)
    40       if( nt .ne. 0 ) mb = mb + m + 2170
-
       if( nt .eq. 0 ) mb = mb + lxss + npikmt + 4
       if( nt .eq. 0 .and.ifirst.eq.0) mbmemory = mbmemory+lxss+npikmt+4 ! not sure necessary or not
       if( nt .ne. 0 ) mb = mb + lexs + 4
       if( nt .ne. 0 .and.ifirst.eq.0) mbmemory = mbmemory+lexs+4  ! not sure necessary or not
       if( nt .ne. 0 ) lmb = mb
-
       if(ifirst.eq.0) then
        allocate(xss(int(mbmemory*parz(201))),  ! default value of parz(201)=1.0 because mbmemory is conservative estimate
      &          exs(int(mbmemory*parz(201))))  ! T.Sato 2021/09/01
        ifirst=1
       endif
-
       if( mb .gt. mdas ) then
          write(iom,'(/
      &       ''<<< Memory ERROR : at getxst >>>'',i9)') mb
@@ -1892,55 +1136,30 @@ c        convert rho*x entries on fm cards to atom densities.
          ierr = 1
          return
       end if
-
-*-----------------------------------------------------------------------
-*     print the page headings.
-*-----------------------------------------------------------------------
-
       if( nt .eq. 0 .or. mxe .eq. 0 ) write(iuo,50)
    50    format(/'***** cross-section tables *****'/
      &   5x,5htable,4x,6hlength)
-
-*-----------------------------------------------------------------------
-*     get the tables from each indicated cross-section file.
-*-----------------------------------------------------------------------
-
          nc = 0
-
       do 410 je = jb, mxe + nt
-
             if( jxs(1,je) .ne. 0 ) goto 410
             hc = ' '
             call zaid(2,hc,ixc(1,je))
-
          do 60 j = 11, 181
             k = mod(ixc((j+1)/3,je)/256**mod(j+1,3),256)
             if( k .eq. 0 ) goto 70
    60       hc(j:j) = char(k)
-
-*-----------------------------------------------------------------------
-*     get the characteristics of the file.
-*-----------------------------------------------------------------------
-
    70       call nxtsym(hc,' ',11,it,iu,0)
             call nxtsym(hc,' ',iu+1,it,iu,0)
             hf = hc(it:iu)
             call nxtsym(hc,' ',iu+1,it,iu,0)
             hr = hc(it:iu)
-
          do 80 i = 1, 5
             call nxtsym(hc,' ',iu+1,it,iu,0)
             if( iu .eq. 0 ) goto 90
             ht = hc(it:iu)
    80       read(ht,'(bn,i10)') ly(i)
-
-*-----------------------------------------------------------------------
-*     fetch the file if it is not already present, and open it.
-*-----------------------------------------------------------------------
-
    90       ha = hf
             if( inqire(ha) .eq. 1 ) goto 95
-
          if( idirch .eq. 0 ) then
             if( leng(hdpath) .gt. 0 )
      &      ha = hdpath(1:leng(hdpath))//'/'//hf
@@ -1948,9 +1167,7 @@ c        convert rho*x entries on fm cards to atom densities.
             if( leng(hdpath) .gt. 0 )
      &      ha = hdpath(1:leng(hdpath))//yen//hf
          end if
-
          if( inqire(ha) .eq. 1 ) goto 95
-
          if( idirch .eq. 0 ) then
             if( leng(hdpth) .gt. 0 )
      &      ha = hdpth(1:leng(hdpth))//'/'//hf
@@ -1962,7 +1179,6 @@ c        convert rho*x entries on fm cards to atom densities.
          if( leng(hr) .gt. 0 ) ha = hr
          if( inqire(ha) .eq. 1 ) goto 95
             ha = hf
-
          write(iom,'(/
      &       ''Error : at getxst, cross section file does not'',
      &       '' exist.''/''file = '',a)') hf(1:leng(hf))
@@ -1971,77 +1187,46 @@ c        convert rho*x entries on fm cards to atom densities.
      &       '' exist.''/''file = '',a)') hf(1:leng(hf))
          ierr = 1
          return
-
    95       nr = 1
          if( ly(1) .eq. 1 ) open(iux,file=ha,status='old')
          if( ly(1) .eq. 2 ) open(iux,file=ha,access='direct',
      &      status='old',recl=ly(4))
          if( ly(1) .eq. 1 ) rewind iux
-
-*-----------------------------------------------------------------------
-*     get all of the pertinent tables in the file.
-*-----------------------------------------------------------------------
-
          write(iuo,100) hf
   100    format(/'** tables from file = <<< ',a64)
       do 400 iex = je, mxe + nt
             if( iex .eq. je ) goto 120
             hc = ' '
             call zaid(2,hc,ixc(1,iex))
-
          do 110 j = 11, 181
             k = mod(ixc((j+1)/3,iex)/256**mod(j+1,3),256)
             if( k .eq. 0 ) goto 120
   110       hc(j:j) = char(k)
-
   120       call nxtsym(hc,' ',11,it,iu,0)
             call nxtsym(hc,' ',iu+1,it,iu,0)
          if( hc(it:iu) .ne. hf ) goto 400
-
             call redxst(nr,iz,hk,hm,hd,hc,lp,iom,ierr)
-
          if( ierr .ne. 0 ) return
             call zaid(2,ht,ixl(1,iex))
-
-*-----------------------------------------------------------------------
-*     check for unresolved flag on xsdir entry.
-*-----------------------------------------------------------------------
-
          if( nty(iex) .ne. 1 ) goto 128
          if( jxs(23,iex) .eq. 0 ) goto 128
-
          do 124 j = 4, 15
             call nxtsym(hc,' ',iu+1,it,iu,1)
             if( iu .eq. 0 ) goto 126
   124       if( j .gt. 10 .and. hc(it:iu) .eq. 'ptable' ) goto 128
-
   126    continue
-
             write(iom,'(/''Error : xsdir entry for '',a/
      &             '' lacks unresolved flag'')') ht
             write(jom,'(/''Error : xsdir entry for '',a/
      &             '' lacks unresolved flag'')') ht
          ierr = 1
          return
-
-*-----------------------------------------------------------------------
-*     convert the pointers to indexes in the buffer in xss.
-*-----------------------------------------------------------------------
-
   128    do 130 i = 1, 32
   130       if( jxs(i,iex) .ne. 0 )
      &          jxs(i,iex) = jxs(i,iex) + lp
-
          if( index('cdhoa',ht(10:10)) .eq. 0 ) goto 131
-
          if( nxs(7,iex) .eq. 0 ) goto 131
-
-*-----------------------------------------------------------------------
-*     quit if nxs(7).gt.maxsec for class c, d, or h data tables
-*-----------------------------------------------------------------------
-
          if( nxs(7,iex) .le. maxsec ) goto 132
-
             write(iom,'(
      &      /''Error : in getxst, nxs(7) greater than maxsec'',
      &                '' for '',a10)') ht
@@ -2050,12 +1235,6 @@ c        convert rho*x entries on fm cards to atom densities.
      &                '' for '',a10)') ht
             ierr = 1
             return
-
-*-----------------------------------------------------------------------
-*     load ixs array.  change locators by lp.
-*     Proton and neutron table version 1 have mixs == 10.
-*-----------------------------------------------------------------------
-
   132    do 133 j = 1, nxs(7,iex)
          do 133 i = 1, 10
             if( nint(xss(jxs(32,iex)+(j-1)*10+i-1)) .ne. 0 )
@@ -2063,87 +1242,45 @@ c        convert rho*x entries on fm cards to atom densities.
      &          nint(xss(jxs(32,iex)+(j-1)*10+i-1)) + lp
   133    continue
   131    continue
-
       if( nt .ne. 0 ) lp = lp + nxs(1,iex) + 2170
-
-*-----------------------------------------------------------------------
       go to(140,140,140,200,290,310,310,353,301,353,353,360) nty(iex)
-
-*-----------------------------------------------------------------------
-*>>>>>  continuous or discrete reaction or dosimetry neutron table.
-*       expunge data not needed by the problem.
-*-----------------------------------------------------------------------
-
   140       if( nty(iex) .ne. 3 )
      &      em = max(em,zero+xss(jxs(1,iex)))
             call expung(hk(52:60),mg,ierr,iom)
             if( ierr .ne. 0 ) return
-
-*-----------------------------------------------------------------------
-*     adjust the temperature of the table.
-*-----------------------------------------------------------------------
-
          th = tbt(iex)
          if( nty(iex) .ne. 3 ) call tmpneu
-
          if( th .ne. tbt(iex) ) ih = ih + 1
-
-*-----------------------------------------------------------------------
-*     form the total fission cross-section table if necessary.
-*-----------------------------------------------------------------------
-
          if( jxs(2,iex) .eq. 0 ) goto 170
          kf = 1
-
          if( jxs(21,iex) .eq. 0 .and.
      &     ( itfxs .ne. 0 .or. jovr(5) .ne. 0 .or.
      &       jxs(13,iex) .ne. 0 ) ) then
-
             call xstfpt(iom,ierr)
             if( ierr .ne. 0 ) return
-
          end if
-
-*-----------------------------------------------------------------------
-*     flag cells where fission is treated as capture.
-*-----------------------------------------------------------------------
-
          do 160 i = 1, mxa
-
             if( nsr .ne. 71 .and. lfcl(i) .ge. 0 ) goto 160
             j = mat(i)
-
          do 150 m = jmd(1+j), jmd(1+j+1) - 1
-
             if( lme(1,m) .ne. iex ) goto 150
             if( nsr .eq. 71 .or. lfcl(i) .eq. -1 ) lfcl(i) = 1
             if( lfcl(i) .eq. -2 ) lfcl(i) = 2
-
   150    continue
   160    continue
-
-*-----------------------------------------------------------------------
-*     print information about the table.
-*-----------------------------------------------------------------------
-
   170       write(iuo,180) ht, nxs(1,iex), hk, hm, hd
   180       format(1x,a10,i8,/10x,a70,/10x,a10,4x,a10)
-
             l = jxs(23,iex)
-
          if( l .ne. 0 ) write(iuo,182) xss(l+6), xss(l+5+nint(xss(l)))
   182    format(10x,28hprobability tables used from,1p1e11.4,
      &          3h to,e11.4,5h mev.)
-
          if( th .ne. tbt(iex) .and. tbt(iex) .ne. 0. )
      &   write(iuo,184) th, tbt(iex)
   184    format(10x,13htemperature =,1pe11.4,12h adjusted to,e11.4)
-
          if( th .ne. tbt(iex) .and.
      &       tbt(iex) .eq. 0. ) write(iuo,186) th
   186    format(10x,13htemperature =,1pe11.4,
      &          24h adjusted at collisions.)
-
          if( jxs(2,iex) .ne. 0 .and.
      &       nxs(8,iex) .eq. 0 .and. itotnu .eq. 1 .and.
      &       dnb .ne. 0. ) then
@@ -2151,72 +1288,37 @@ c        convert rho*x entries on fm cards to atom densities.
      &         '## warning. '//ht//
      &         ' lacks delayed neutron cross sections.'
          end if
-
-*-----------------------------------------------------------------------
-*     store maximum energy for the table (n/a to dosimetry tables)
-*-----------------------------------------------------------------------
-
          if( nty(iex) .ne. 3 )
      &      emaxt(iex) = xss(jxs(1,iex)+nxs(3,iex)-1)
-
-*-----------------------------------------------------------------------
-*     print gamma-production message or warning.
-*-----------------------------------------------------------------------
-
          if( mg .eq. 0 .or. jxs(13,iex) .ne. 0 ) goto 380
          if( jxs(12,iex) .ne. 0 ) nc = nc + 1
-
          if( jxs(12,iex) .ne. 0 ) write(iuo,190)
   190    format(10x,42hobsolete gamma-ray production method using,
      &          27h equally-probable energies.)
-
          if( jxs(12,iex) .eq. 0 ) write(iom1,*)
      &       '## warning. '//ht//
      &       ' lacks gamma-ray production cross sections.'
          goto 380
-
-*-----------------------------------------------------------------------
-*>>>>>  thermal s(a,b) neutron table.
-*       set up the cut-in energy.
-*-----------------------------------------------------------------------
-
   200    esa(iex) = xss(jxs(1,iex)
      &                 + nint(xss(jxs(1,iex))))
-
          if( jxs(4,iex) .ne. 0 .and.
      &       nxs(5,iex) .ne. 4 )
      &       esa(iex) = min(zero+xss(jxs(4,iex)
      &                     + nint(xss(jxs(4,iex)))),esa(iex))
-
-*-----------------------------------------------------------------------
-*     print information about the table.
-*-----------------------------------------------------------------------
-
          write(iuo,210) ht, nxs(1,iex),hk,iz(1),iz(2),iz(3), hd
   210    format(1x,a10,i8,/10x,a70,/10x,3i6,a10)
-
-*-----------------------------------------------------------------------
-*     set up the lmt array.
-*     check that zaids implied by mt card entries are on m card.
-*-----------------------------------------------------------------------
-
          do 280 k = 1, indt
             call zaid(2,hm,kmt(1,k))
             if( hm(1:9) .ne. ht(1:9) .and.
      &          hm(1:9) .ne. ht(1:7)//'  ' ) goto 280
-
          do 220 j = 1, 3
             iq(j) = 0
   220       if( iz(j) .ne. 0 ) iq(j) = 1
-
          do 230 i = 1, nmat
   230       if( nmt(i) .eq. jmt(k) ) goto 240
-
   240    do 260 m = jmd(1+i), jmd(1+i+1) - 1
             ie = lme(1,m)
-
          do 250 j = 1, 3
-
             if( ie .eq. 0 ) goto 250 ! Ogawa 2021/09/01, skip following commands if ie=0 (default value)
             if( nxs(2,ie) .ne. iz(j) ) goto 250
             lmt(m) = iex
@@ -2225,48 +1327,23 @@ c        convert rho*x entries on fm cards to atom densities.
      &         iq(mod(j,3)+1) = 0
             if( iz(mod(j+1,3)+1)/1000 .eq. iz(j)/1000 )
      &         iq(mod(j+1,3)+1) = 0
-
   250    continue
   260    continue
-
          do 270 j = 1, 3
   270       if( iq(j) .ne. 0 ) write(iom1,'('' ## warning. m'',i3,
      &      '' card lacks'',i6,'' for '',a,'' on mt'',i3,'' card.'')')
      &      nmt(i),iz(j), hm, nmt(i)
-
   280    continue
          goto 380
-
-*-----------------------------------------------------------------------
-*>>>>>  photon table.
-*       find the maximum energy over all tables, and note the ZAID.
-*-----------------------------------------------------------------------
-
   290    e = et
          et = min(et,zero+xss(jxs(1,iex)+nxs(3,iex)-1))
          if( et .lt. e ) hp = ht
-*-----------------------------------------------------------------------
-*     save the maximum energy for this table.
-*-----------------------------------------------------------------------
-
          emaxt(iex) =
      &          exp(xss(jxs(1,iex)+nxs(3,iex)-1))
-
-*-----------------------------------------------------------------------
-*     print information about the table.
-*-----------------------------------------------------------------------
-
          write(iuo,300) ht, nxs(1,iex), hk, hm, hd
   300    format(1x,a10,i8,/10x,a70,/10x,a10,4x,a10)
-
          goto 380
-*-----------------------------------------------------------------------
-*>>>>> photonuclear table.
-*      if secondary particle information exists, load ixs.
-*-----------------------------------------------------------------------
-
   301    if( nxs(5,iex) .eq. 0 ) goto 306
-
          if( nxs(5,iex) .gt. maxsec ) then
             write(iom,'(
      &      /''Error : in getxst, nxs(57) greater than maxsec'',
@@ -2277,80 +1354,37 @@ c        convert rho*x entries on fm cards to atom densities.
            ierr = 1
            return
          end if
-
          do 303 i = 1, mixs
          do 303 j = 1, nxs(5,iex)
             k = nint(xss(jxs(10,iex)+i+mixs*(j-1)-1))
             ixs(i,j,iex) = k
   303       if( i .gt. 2 .and. k .ne. 0 )
      &      ixs(i,j,iex) = k + lp + lxs
-
-*-----------------------------------------------------------------------
-*     find minimum energy for each material
-*-----------------------------------------------------------------------
-
   306    do 307 i = 1, nmat
          do 307 j = jmd(1+i), jmd(1+i+1) - 1
   307       if( iex .eq. lmn(j))
      &      pnt(i) = min(pnt(i),xss(jxs(1,iex)))
-
-*-----------------------------------------------------------------------
-*     print table information
-*-----------------------------------------------------------------------
-
          write(iuo,309) ht, nxs(1,iex), hk, hm, hd
   309    format(1x,a10,i8,/2x,a70,/4x,a10,4x,a10)
-
          goto 380
-*-----------------------------------------------------------------------
-*>>>>>  multigroup table for any type of particle.
-*-----------------------------------------------------------------------
-
   310    call mgxst(hk(52:60),iom,ierr)
-
          if( ierr .ne. 0 ) return
-
-*-----------------------------------------------------------------------
-*     flag cells where fission is treated as capture.
-*-----------------------------------------------------------------------
-
          if( jxs(3,iex) .eq. 0 ) goto 340
-
             kf = 1
-
          do 330 i = 1, mxa
-
             if( lfcl(i) .ge. 0 .and. nsr .ne. 71 ) goto 330
             j = mat(i)
-
          do 320 m = jmd(1+j), jmd(1+j+1) - 1
-
             if( lme(1,m) .ne. iex ) goto 320
             if( nsr .eq. 71 .or. lfcl(i) .eq. -1 ) lfcl(i) = 1
             if( lfcl(i) .eq. -2 ) lfcl(i) = 2
-
   320    continue
   330    continue
-
-*-----------------------------------------------------------------------
-*     print information about the table.
-*-----------------------------------------------------------------------
-
   340    write(iuo,350) ht, nxs(1,iex), hk, hm, hd
   350    format(1x,a10,i8,/10x,a70,/10x,a10,4x,a10)
          goto 380
-*-----------------------------------------------------------------------
-*>>>>>  proton table.
-*       save the maximum energy of the table
-*-----------------------------------------------------------------------
-
   353    emaxt(iex) =
      &          xss(jxs(1,iex) + nxs(3,iex)-1)
-
-*-----------------------------------------------------------------------
-*        convert secondary particle mt's to indices.
-*-----------------------------------------------------------------------
-
       do 358 ip=1,nxs(7,iex)
       if(nint(xss(jxs(30,iex)+ip-1)).eq.0.or.
      &   nint(xss(jxs(31,iex)+ip-1)).eq.1)go to 358
@@ -2362,41 +1396,23 @@ c        convert rho*x entries on fm cards to atom densities.
         enddo
       enddo
   358 continue
-*-----------------------------------------------------------------------
-*     print information about the table.
-*-----------------------------------------------------------------------
-
          write(iuo,357) ht, nxs(1,iex), hk, hm, hd
  357     format(1x,a10,i8,/2x,a70,/4x,a10,4x,a10)
          goto 380
-*-----------------------------------------------------------------------
-*>>>>>  electron table.
-*        print information about the table.
-*-----------------------------------------------------------------------
-
   360    write(iuo,370) ht, nxs(1,iex), hk, hm, hd
   370    format(1x,a10,i8,/10x,a70,/10x,a10,4x,a10)
-
          jxs(7,iex) = jxs(1,iex) + nxs(1,iex)
          jxs(8,iex) = jxs(7,iex) + 2160
          if( its30 .eq. 0 ) its30 = nxs(16,iex)
-
       if( its30 .ne. nxs(16,iex) ) then
          write(iom,'(/''Error : electron tables are incompatible.'')')
          ierr = 1
          return
       end if
-
       goto 400
-
-*-----------------------------------------------------------------------
-*     convert the indexes in the buffer into indexes in xss.
-*-----------------------------------------------------------------------
-
   380    do 390 i = 1, 32
   390       if( jxs(i,iex) .ne. 0 )
      &          jxs(i,iex) = jxs(i,iex) + lxs
-
             if( nty(iex) .eq. 1 .or. nty(iex) .eq. 2 .or.
      &          nty(iex) .eq. 8 .or.
      &          nty(iex) .eq. 10 .or. nty(iex) .eq. 11 ) then
@@ -2406,106 +1422,60 @@ c        convert rho*x entries on fm cards to atom densities.
             else
                ns = 0
             end if
-
          do 395 j = 1, ns
          do 395 i = ms, me
   395       if( ixs(i,j,iex) .ne. 0 )
      &      ixs(i,j,iex) = ixs(i,j,iex) + lxs
-*-----------------------------------------------------------------------
-*     write the table on the runtpe file.
-*-----------------------------------------------------------------------
-
          call tapefl(2)
             lxs = lxs + nxs(1,iex)
-
       if( nxs(1,iex) .eq. 0 ) then
          write(iom,'(/''Error : table '',a,
      &                '' has been expunged to zero length.'')') ht
          ierr = 1
          return
       end if
-
-*-----------------------------------------------------------------------
-
   400 continue
       close(iux)
-
   410 continue
       if( nt .ne. 0 ) return
-
-*-----------------------------------------------------------------------
-*     check for unresolved probability tables.  If a nuclide with
-*     probability tables (jxs(23,i)>0) is specified at several
-*     temperatures (same zaid numbers, nxs(2,i), different i),
-*     set iunr=-n to flag correlated multi-temperatures.
-*-----------------------------------------------------------------------
-
          if( xunru .eq. 0. ) iunr = 0
          if( iunr .le. 0 ) goto 418
-
          do 414 ie = 1, mxe - 1
             if( nty(ie) .ne. 1 .or.
      &          jxs(23,ie) .le. 0 ) goto 414
-
          do 412 je = ie + 1, mxe
   412       if( nty(je) .eq. 1 .and.
      &          jxs(23,je) .gt. 0 .and.
      &          nxs(2,ie) .eq. nxs(2,je) ) goto 416
-
   414    continue
          goto 418
-
   416    iunr = -iunr
-
          write(iom1,*)
      &    '## warning. multi-temperature treatment'//
      &    ' used for neutron unresolved.'
-
-*-----------------------------------------------------------------------
-*     turn off any irrelevant fission-as-capture flags.
-*-----------------------------------------------------------------------
-
   418    do 420 i = 1, mxa
   420       if( lfcl(i) .lt. 0 ) lfcl(i) = 0
-
-*-----------------------------------------------------------------------
-*     print the total storage used and the expunge limits.
-*-----------------------------------------------------------------------
-
       write(iuo,'(/''*** total length ='',i12)') lxs
-
-
-
-c        print warnings.
          if( nc .ne. 0 ) write(iom1,'('' ## warning. '',i2,
      & '' cross-section tables have poor gamma-production data.'')') nc
-
          if( max(zero+1.0001e-11,ecf(1)) .lt. em ) write(iom1,*)
      &    '## warning. neutron energy cutoff is below'//
      &    ' some cross-section tables.'
-
          if(ih.ne.0) write(iom1,'('' ## warning. '',i4,
      &    '' cross sections modified by free gas thermal treatment.''
      &      )') ih
-
          if( kpt(2) .ne. 0 .and. et .ne. huge ) emx(2) = exp(et)
          if( kpt(3) .ne. 0 .or. ( kpt(2) .ne. 0 .and. ides .eq. 0 ) )
      &       emx(2) = min(emx(2),emx(3))
          if( abs(emx(2)-emx(3)) .lt. .00001 * emx(3) ) emx(2) = emx(3)
-
 ! T.Sato 2014/9/18, following checks are not necessary for EGS mode
-
          if(iegsemi.eq.0.and.mstz(1).eq.0) then
-
          if( emx(2) .lt. emx(3) ) write(iuo,442) emx(2), hp
   442    format(/29h maximum photon energy set to,e11.4,
      &           26h MeV (top energy of zaid =,a10,1h))
-
          if( emx(2) .eq. emx(3) ) write(iuo,444) emx(2)
   444    format(/29h maximum photon energy set to,e11.4,
      &   30h MeV (maximum electron energy))
-
-
          if( kpt(3).ne.0.and.emx(3).gt.emx(2)) then
             write(iom,'(/''Error : maximum electron energy > '',
      &                ''some photon cross-section tables'')')
@@ -2514,43 +1484,21 @@ c        print warnings.
             ierr = 1
             return
          end if
-
          endif
-
          do 450 i = 1, ntal
   450       if( ktp(2,i) .ne. 0 ) goto 460
-
          return
-
   460    if( kf * kpt(2) .ne. 0 ) write(iom1,*)
      &    'cannot generate delayed gamma-rays from fissions.'
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-************************************************************************
-*                                                                      *
       subroutine redxst(nr,iz,hk,hm,hd,hc,lp,iom,ierr)
-*                                                                      *
-*       read the cross-section table described by hc.                  *
-*                                                                      *
-*       Last modified by K.Niita on 2009/09/04                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
       include 'err.inc'
-
-c frtati 2022/03/03 data max extended
 ! T.Sato 2019/03/14 for checking maximum energy
       common /ndtmax/ indmp, indmn, indmu, indmd, indma,
      & nucdxp(500), nucdxn(500), nucdxu(500), nucdxd(500), nucdxa(500),
@@ -2558,42 +1506,23 @@ c frtati 2022/03/03 data max extended
       common /ddtmax/ dmxdxp(500), dmxdxn(500),
      &                dmxdxu(500), dmxdxd(500), dmxdxa(500)
       common /paraj/  mstz(300), parz(300)
-
-*-----------------------------------------------------------------------
-
       character hf*64,hz*10,hk*70,hm*10,hd*10,ht*10,hc*181
       dimension ly(5),iz(0:16),aw(0:16)
-
-*-----------------------------------------------------------------------
-*     set up the file and record characteristics.
-*-----------------------------------------------------------------------
-
          hz = ' '
          iu = 0
-
          do 10 i = 1, 9
-
             call nxtsym(hc,' ',iu+1,it,iu,1)
             if( iu .eq. 0 ) goto 20
             if( i .eq. 3 ) hf = hc(it:iu)
             if( i .ge. 5 ) ht = hc(it:iu)
    10       if( i .ge. 5 ) read(ht,'(bn,i10)') ly(i-4)
    20       call zaid(2,ht,ixl(1,iex))
-
-
          if( ly(1) .eq. 2 ) goto 80
-
-*-----------------------------------------------------------------------
-*>>>>>  ly(1)=1 -- standard portable formatted file.
-*-----------------------------------------------------------------------
-
    30    if( ly(2) .ge. nr ) goto 40
             nr = 1
             rewind iux
-
    40    do 50 i = 1, ly(2) - nr
    50       read(iux,'(a10)') hz
-
          read(iux,'(a10,2e12.0,1x,a10)',err=200) hz, aw(0), tz, hd
          call nxtsym(hz,' ',1,i,j,2)
          if( hz .ne. ht ) goto 200
@@ -2602,7 +1531,6 @@ c frtati 2022/03/03 data max extended
      &       (jxs(i,iex),i=1,32)
    60    format(a70,a10/4(i7,f11.0)/4(i7,f11.0)/
      &          4(i7,f11.0)/4(i7,f11.0)/8i9/8i9/8i9/8i9/8i9/8i9)
-
          do i=10,1,-1 ! JIMD 2021/10/11, avoid ifeng>2 for thermal kernel
           if(hz(i:i).ne.' ') exit
          enddo
@@ -2618,20 +1546,13 @@ c frtati 2022/03/03 data max extended
      &      read(iux,70,err=200) (exs(lp+i),i=1,ly(3))
    70    format(4e20.0)
          nr = ly(2)+12+(ly(3)+3) / 4
-
          goto 180
-
-*-----------------------------------------------------------------------
-*>>>>>  ly(1)=2 -- standard unformatted file.
-*-----------------------------------------------------------------------
-
    80    read(iux,rec=ly(2),err=200) hz, aw(0), tz, hd, hk, hm,
      &       (iz(i),aw(i),i=1,16), (nxs(i,iex),i=1,16),
      &       (jxs(i,iex),i=1,32)
          call nxtsym(hz,' ',1,i,j,2)
          if( hz .ne. ht ) goto 200
          k = nty(iex)
-
          do 90 i = 1, (ly(3)+ly(5)-1)/ly(5)
             j1 = lp + 1 + (i-1) * ly(5)
             j2 = min(lp+ly(3),j1+ly(5)-1)
@@ -2640,118 +1561,60 @@ c frtati 2022/03/03 data max extended
      &                          (xss(j),j=j1,j2)
    90       if( k .eq. ihtnele ) read(iux,rec=ly(2)+i,err=200)
      &                          (exs(j),j=j1,j2)
-
-*-----------------------------------------------------------------------
-*     check if library and xsdir temperatures different.
-*-----------------------------------------------------------------------
-
   180    if( nty(iex) .lt. 3 .and.
      &       abs(tbt(iex)-tz) .gt. .005 * (tbt(iex)+tz)) then
-
             ErrCha = ''
             ErrID = 'L:2652/R:redxst/F:ggm02.f' !E04_004_001
             call ErrWriteIO(ErrID,ErrCha,iom)
             call ErrWrite(ErrID,ErrCha)
-
             write(iom,'(/''Error : xsdir and library temperatures'',
      &       '' disagree:'',a)') ht
             write(*,'(/''Error : xsdir and library temperatures'',
      &       '' disagree:'',a)') ht
-
             ierr = 1
             return
          end if
-
-*-----------------------------------------------------------------------
-*     check maximum energy, T.Sato 2019/03/14
-*-----------------------------------------------------------------------
-cfrtati 2022/03/22 warning moved to datamaxsummary
-
-*-----------------------------------------------------------------------
-*     check that the dates match.
-*-----------------------------------------------------------------------
-
          m = 0
          do 190 i = 1, 10
             n = index('0123456789/',hd(i:i))
   190       if( n .ne. 0 ) m = 11 * m + n
-
          if( m .eq. kxd(iex) .or. kxd(iex) .eq. 0 ) return
-
   200    continue
-
          ErrCha =""
          ErrID = 'L:2684/R:redxst/F:ggm02.f' !E04_005_001
          call ErrWrite(ErrID,ErrCha)
-
          write(iom,'(/''Error : in '',a,/'' cross section file '',a)')
      &   ht, hf(1:27)
          write(*,'(/''Error : in '',a,/'' cross section file '',a)')
      &   ht, hf(1:27)
-
          ierr = 1
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-************************************************************************
-*                                                                      *
       subroutine expung(hn,mg,ierr,iom)
-*                                                                      *
-*       remove data not needed by the problem from neutron table iex.  *
-*       return 'total nu' or 'prompt nu' in hn for type 19 fission.    *
-*       return mg=1 if gamma-production data are needed, =0 otherwise. *
-*                                                                      *
-*       Last modified by K.Niita on 2009/10/19                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       use moddas_tally
       implicit real*8 (a-h,o-z)
-
       parameter ( imfnmax=1000) ! T.Sato 2022/10/30
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       common /kmat1o/ iom1, iom2, iom3
-
       common /kmat1d/ idmn(0:kvlmax), idnm(kvmmax)
-
       common /tall00/ itnm, ital(itlmax), itals(itlmax), italm(itlmax)
       common /tall33/ itln(itlmax,2), itli(itlmax,2), itlr(itlmax,2),
      &                rtdm(itlmax,2)
-
       common /tall45/ itmlp(itlmax), itmln(itlmax,6), itmst(itlmax),
      &                itmli(itlmax,6), rtmme(itlmax,6), itmnt(itlmax,6),
      &                itmpn(itlmax,6), itmpt(itlmax,6,6,2)
-
       common /fmcard/ ifm, ifmi(imfnmax,3)
       common /tcntl/  icntl, inucr
       common /emode/  emodem, ge1, ge2, iemode
-
 ! T.Sato 2018/03/06, Kerma control
       common /kermon/ikerman,ikermap
       common /clionprd/  lionprd
-
-*-----------------------------------------------------------------------
-
       parameter (m3=2000,m4=200) ! T.Sato 2019/03/07 extended to m3=2000, see Email from Alexey on 2019/03/06
       dimension jx(32),m2(m3),jf(m4),nx(8),ix(mixs,maxsec),ml(m3)
       character hn*(9),ht*10
-
-*-----------------------------------------------------------------------
-*     set lc if cross-section table iex will be used for transport.
-*     set mg if the gamma-production data are needed for transport.
-*-----------------------------------------------------------------------
-
       call zaid(2,ht,ixl(1,iex))
          lc = 0
          mg = 0
@@ -2763,121 +1626,67 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          if(lme(1,m).eq.iex.and.gwt(i).ne.-1e6) mg = 1
    10 continue
    20 continue
-
-*-----------------------------------------------------------------------
-*     list in jf the reaction numbers from fm cards that refer to
-*     table iex, and set mg if gamma-production data are required.
-*     set ih if any fm card requires heating numbers in table iex.
-*-----------------------------------------------------------------------
-
          nr = 0
          ih = 0
-
-*-----------------------------------------------------------------------
 !        set gamma production flag, ngmfl, for xs plotting.
 !        if mg=0 there is no gamma production for that zaid.
 !        mg will not necessarily be 0 if there is no gamma production
 !        data for that particular zaid.
-*-----------------------------------------------------------------------
-*     DPA tally library
-*-----------------------------------------------------------------------
-
          do k = 1, itnm
          do j = 1, 2
-
             if( itln(k,j) .gt. 0 ) then
-
                   if( j .eq. 1 ) ipid = 9
                   if( j .eq. 2 ) ipid = 1
-
                do kk = 1, itln(k,j)
-
                      ii = idnm( mlib(itli(k,j)+1,kk) )
-
                   do 50 m = jmd(1+ii), jmd(1+ii+1)-1
-
                      if( lme(ipid,m) .ne. iex ) goto 50
-
                      i1 = mlib(itli(k,j)+2,kk)
-
                      do kl = 1, nr
                         if( jf(kl) .eq. i1 ) goto 50
                      end do
-
                      nr = nr + 1
-
                      if(nr.gt.m4) then
                         write(iom,'(/''Error : dimension overflow in'',
      &                  '' expung. increase m4 to'',i5)') nr
                         ierr = 1
                         return
                      end if
-
                      jf(nr)=i1
-
    50             continue
-
                end do
-
             end if
-
          end do
          end do
-
-*-----------------------------------------------------------------------
-*     FM card
-*-----------------------------------------------------------------------
-
       if( ifm .gt. 0 ) then
-
          do k = 1, ifm
-
                   ipid = ifmi(k,1)
-
 !                     ii = idnm( ifmi(k,2) )
                   if(ifmi(k,2).eq.0) then
                    ii=1 ! Temporary!!!! T.Sato 2024/12/24, applicable to m = 0 in mset
                   else
                    ii = idnm( ifmi(k,2) )
                   endif
-
                   do 51 m = jmd(1+ii), jmd(1+ii+1)-1
-
                      if( lme(ipid,m) .ne. iex ) goto 51
-
                      i1 = ifmi(k,3)
-
                      do kl = 1, nr
                         if( jf(kl) .eq. i1 ) goto 51
                      end do
-
                      nr = nr + 1
-
                      if(nr.gt.m4) then
                         write(iom,'(/''Error : dimension overflow in'',
      &                  '' expung. increase m4 to'',i5)') nr
                         ierr = 1
                         return
                      end if
-
                      jf(nr)=i1
-
                      if(i1.eq.-5.or.i1.gt.1000.and.i1.lt.1000000)mg=1
                      if(i1.eq.-4)ih=1
-
    51             continue
-
          end do
-
       end if
-
-*-----------------------------------------------------------------------
       ngmfl(iex)=mg
-
-*-----------------------------------------------------------------------
-*     add perturbation reaction numbers to the jf array.
-*-----------------------------------------------------------------------
-
       do 84 ip = 1, npert
          n1 = iptb(9,ip)
          if(n1.eq.0) goto 84
@@ -2893,81 +1702,36 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          goto 84
    83 continue
    84 continue
-
-*-----------------------------------------------------------------------
-*     keep sum of inelastic mt with unresolved probability
-*     tables; if only one level involved, keep its mt.
-*-----------------------------------------------------------------------
-
          l = jxs(23,iex)
          if(l.eq.0) goto 98
          i1 = nint(xss(l+3))
          if(i1.le.0) goto 88
-
       do 86 k = 1, nr
    86    if(jf(k).eq.i1) goto 88
          nr = nr + 1
          jf(nr) = i1
-
-*-----------------------------------------------------------------------
-*     keep other absorption mt with unresolved probability tables.
-*-----------------------------------------------------------------------
-
    88    i1 = nint(xss(l+4))
          if(i1.le.0) goto 94
       do 92 k = 1, nr
    92    if(jf(k).eq.i1) goto 94
          nr = nr + 1
          jf(nr) = i1
-
-*-----------------------------------------------------------------------
-*     unresolved probability tables:
-*     keep mt 102 and heating numbers (ih=1 if using factors).
-*-----------------------------------------------------------------------
-
    94    ih = 1
-
       do 96 k = 1, nr
    96    if(jf(k).eq.102) goto 98
          nr = nr + 1
          jf(nr) = 102
-
-*-----------------------------------------------------------------------
-*     set ih if any type 6 tally needs heating numbers in table iex.
-*-----------------------------------------------------------------------
-
    98 continue
-
-
-*-----------------------------------------------------------------------
-*     heat tally or inucr = 12, 20
-*-----------------------------------------------------------------------
          do k = 1, itnm
-
             if( ital(k) .eq. 4 .and. nr .eq. 0 ) goto 123
-
             if(ital(k).eq.13.and.ikerman.eq.2) goto 123  ! T.Sato 2018/03/07
-
          end do
-
          if( icntl .eq. 1 .and. inucr .ge. 12 .and. nr .eq. 0 ) goto 123
-
          do k = 1, itnm
-
             if( itmlp(k) .gt. 0 .and. nr .eq. 0 ) goto 123
-
          end do
-
-*-----------------------------------------------------------------------
-
       go to 125
-
   123 ih=1
-
-*-----------------------------------------------------------------------
-*     set up initial values of temporary pointers and counters.
-*-----------------------------------------------------------------------
-
   125 do 130 i = 2, 32
   130    jx(i) = 0
       do 140 i = 3, 8
@@ -2976,24 +1740,16 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
       do 145 j = 1, nx(7)
   145    ix(i,j) = ixs(i,j,iex)
          lw = jxs(1,iex)
-
-*-----------------------------------------------------------------------
-*    find minimum and maximum energy mesh indexes.
-*-----------------------------------------------------------------------
-
          em = emx(1)+1.e-12*emx(1)
          ec = ecf(1)-1.e-12*ecf(1)
          if(nty(iex).eq.3) goto 200
-
          if(xss(lw).ge.xss(lw+1)) write(iom1,*)
      &    '## warning. '//ht//' lowest energy grid point adjusted.'
-
          if(xss(lw).ge.xss(lw+1)) xss(lw) = xss(lw+1)-1.e-5*xss(lw+1)
          j1 = 1
          j2 = 1
          j3 = 0
          el = -1.
-
       do 150 i = 1, nxs(3,iex)
          if(xss(i+lw-1).le.ec) j1 = i
          if(xss(i+lw-1).lt.em) j2 = min(nxs(3,iex),i+1)
@@ -3004,29 +1760,12 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
             write(iom1,'('' ## warning : in expung'',a,
      &                   '' is complete wiped out'')') ht
          end if
-
          if(j3.ne.0) write(iom1,'('' ## warning. '',i7,
      &    '' coincident energy grid points in '',a)') j3, ht
-
-*-----------------------------------------------------------------------
-*     set heating flag, nhtfl, for xs plotting.
-*     ih=1 means the heating numbers have not been expunged.
-*-----------------------------------------------------------------------
-
          nhtfl(iex) = ih
-
-*-----------------------------------------------------------------------
-*     expunge energies and the four simple cross-section tables.
-*-----------------------------------------------------------------------
-
          nn = 4+ih
          if(nx(3).eq.nxs(3,iex).and.lc.ne.0) goto 190
          if(lc.ne.0.or.ih.ne.0) goto 170
-
-*-----------------------------------------------------------------------
-*     to protect wtmult and acetot, always keep total and absorption.
-*-----------------------------------------------------------------------
-
          nn = 3
       do 160 i = 1, nr
   160    if(jf(i).eq.2) nn = 4
@@ -3034,114 +1773,57 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
       do 180 i = 1, nx(3)
   180    xss(lw+(n-1)*nx(3)+i-1) = xss(lw+(n-1)*nxs(3,iex)+j1+i-2)
   190    lw = lw+nn*nx(3)
-
-*-----------------------------------------------------------------------
-*     set m2 array parallel to mtr with zeros for unneeded reactions.
-*-----------------------------------------------------------------------
-
          jd = j1
          if(nty(iex).eq.2) jd = j1-1
   200    n3 = max(nxs(4,iex),nxs(5,iex),nxs(6,iex))
-
          if(n3.gt.m3) then
             write(iom,'(/''Error : dimension overflow in expung.'',
      &            '' increase m3 to'',i5)') n3
                ierr = 1
                return
          end if
-
       do 260 n = 1, nxs(4,iex)
          m2(n) = nint(xss(jxs(3,iex)+n-1))
-
-*-----------------------------------------------------------------------
-*     check energy indicies in sig for intersection with (j1,j2).
-*-----------------------------------------------------------------------
-
          if(nty(iex).eq.3) goto 210
          j = jxs(7,iex)+nint(xss(jxs(6,iex)+n-1))-1
          if(j2.le.nint(xss(j)).or.jd.ge.nint(xss(j))+nint(xss(j+1))-1)
      &   goto 250
-
-*-----------------------------------------------------------------------
-*      keep reaction if it is needed for transport.
-*-----------------------------------------------------------------------
-
   210    if(n.le.nxs(5,iex).and.lc.ne.0) goto 260
-
-*-----------------------------------------------------------------------
-*     keep reaction if emode = 2, in which case, MT = 102~110 is necessary for channel identification. 2014/7/29 ogawa
-*-----------------------------------------------------------------------
-
          if(iemode .ge. 2 .and. m2(n) .ge. 102 .and. m2(n) .le. 110)then
           goto 260
          endif
-
-*-----------------------------------------------------------------------
-*     keep reaction if it is needed for gamma-yield multiplier.
-*-----------------------------------------------------------------------
-
          if(mg.eq.0.or.jxs(20,iex).eq.0) goto 230
       do 220 i = 1, nint(xss(jxs(20,iex)))
   220    if(nint(xss(jxs(20,iex)+i)).eq.m2(n)) goto 260
-
-*-----------------------------------------------------------------------
-*     keep neutron reaction if needed as particle-yield multiplier
-*-----------------------------------------------------------------------
-
   230 do 221 i = 1, nx(7)
       do 223 jp = 1, mipt
   223    if(kpt(jp).ne.0.and.jp.eq.nint(xss(jxs(30,iex)+i-1)))
      &   go to 224
          go to 221
-
   224 do 222 ii = 1,nint(xss(ixs(10,i,iex)))
   222    if(nint(xss(ixs(10,i,iex)+ii)).eq.m2(n)) goto 260
   221 continue
-
-*-----------------------------------------------------------------------
-*     keep reaction if it is needed for any tally.
-*-----------------------------------------------------------------------
-
       do 240 i = 1, nr
   240    if(m2(n).eq.jf(i).or.jf(i).eq.-6.and.
      &    (m2(n).ge.18.and.m2(n).le.21.or.m2(n).eq.38)) goto 260
-
-*-----------------------------------------------------------------------
-*     delete unneeded reaction.
-*-----------------------------------------------------------------------
-
   250    if(n.le.nxs(5,iex)) nx(5) = nx(5)-1
          nx(4) = nx(4)-1
          m2(n) = 0
   260 continue
-
-*-----------------------------------------------------------------------
-*     check that all reactions needed for fm cards exist.
-*-----------------------------------------------------------------------
-
       do 280 i = 1, nr
          if((jf(i).lt.3.or.jf(i).gt.1000).and.nty(iex).ne.3)
      &   goto 280
-
       do 270 l = 1, nxs(4,iex)
   270    if(m2(l).eq.jf(i)) goto 280
-
          write(iom1,'('' ## warning. '',
      &    ''fm/pert card rxn'',i4,'' is missing from '',a)') jf(i), ht
-
   280 continue
-
-*-----------------------------------------------------------------------
-*     select prompt or total type 19 fission nu data, if any.
-*-----------------------------------------------------------------------
          n = jxs(3,iex)-jxs(2,iex)
          if(jxs(2,iex).eq.0.or.n.le.0) goto 310
          jx(2) = lw
          lr = jxs(2,iex)
-
          if(nint(xss(lr)).gt.0) write(iom1,*)
      &   '## warning. nubar of '//ht//' may be either prompt or total.'
-
          if(nint(xss(lr)).gt.0) goto 290
          n = -nint(xss(lr))
          lr = lr+1
@@ -3150,17 +1832,10 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          lr = lr+n
          n = jxs(3,iex)-jxs(2,iex)-n-1
          hn = 'total nu'
-
   290 do 300 i = 1, n
   300    xss(lw+i-1) = xss(lr+i-1)
          lw = lw+n
-
-*-----------------------------------------------------------------------
-*     expunge the mtr, lqr, tyr, and lsig arrays.
-*-----------------------------------------------------------------------
-
   310    if(nx(4).le.0) goto 380
-
       do 330 i = 3, 6
          if(nty(iex).eq.3.and.(i.eq.4.or.i.eq.5)) goto 330
          jx(i) = lw
@@ -3170,53 +1845,29 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          lw = lw+1
   320 continue
   330 continue
-
-*-----------------------------------------------------------------------
-*     expunge the sig array and redefine the lsig array.
-*-----------------------------------------------------------------------
-
          jx(7) = lw
          iw = jx(6)-1
-
       do 370 j = 1, nx(4)
          ib = jxs(7,iex)+nint(xss(iw+j))-1
          xss(iw+j) = lw-jx(7)+1
          if(nty(iex).eq.3) goto 350
          if(nint(xss(jx(3)+j-1)).eq.18) jx(21) = lw
          jb = nint(xss(ib))+nint(xss(ib+1))-1
-
-*-----------------------------------------------------------------------
-*     ic=min index to save relative to old energy table.
-*-----------------------------------------------------------------------
-
          ic = max(nint(xss(ib)),j1)
          lr = ic-nint(xss(ib))+ib
          xss(lw) = ic-j1+1
          xss(lw+1) = min(jb,j2)-ic+1
-
       do 340 i = 1, nint(xss(lw+1))
   340    xss(lw+i+1) = xss(lr+i+1)
          lw = lw+nint(xss(lw+1))+2
          goto 370
-
   350    n = 2*(nint(xss(ib))+nint(xss(ib+2*nint(xss(ib))+1))+1)
-
       do 360 i = 1, n
   360    xss(lw+i-1) = xss(ib+i-1)
          lw = lw+n
   370 continue
-
-*-----------------------------------------------------------------------
-*     expunge the land array.
-*-----------------------------------------------------------------------
-
   380    if(lc.eq.0) goto 480
          jx(8) = lw
-
-*-----------------------------------------------------------------------
-*     locator for elastic collision cosines
-*-----------------------------------------------------------------------
-
          xss(lw) = xss(jxs(8,iex))
          lw = lw+1
       do 390 i = 1, nxs(5,iex)
@@ -3224,45 +1875,20 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          xss(lw) = xss(jxs(8,iex)+i)
          lw = lw+1
   390 continue
-
-*-----------------------------------------------------------------------
-*     expunge the and array and redefine the land array.
-*-----------------------------------------------------------------------
-
          jx(9) = lw
       do 450 j = 1,nx(5)+1
          i = jx(8)+j-1
-
-*-----------------------------------------------------------------------
-*     allow for negative values in land array.
-*-----------------------------------------------------------------------
-
          if(nint(xss(i)).le.0) goto 450
          iw = jxs(9,iex)+nint(xss(i))-1
          xss(i) = lw-jx(9)+1
          m = nint(xss(iw))
-
-*-----------------------------------------------------------------------
-*     find minimum and maximum energy mesh indexes.
-*-----------------------------------------------------------------------
-
          i1 = 1
          i2 = 1
       do 400 i = 1, m
          if(xss(iw+i).le.ec) i1 = i
   400    if(xss(iw+i).lt.em) i2 = min(i+1,m)
-
-*-----------------------------------------------------------------------
-*     expunge the energy and lmu arrays.
-*-----------------------------------------------------------------------
-
          nd = i2-i1+1
          xss(lw) = nd
-
-*-----------------------------------------------------------------------
-*     ib points at the word preceeding lmu array in its new location.
-*-----------------------------------------------------------------------
-
          ib = lw+nd
          lw = lw+1
       do 410 i = 1, nd
@@ -3270,19 +1896,9 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
       do 420 i = 1, nd
   420    xss(lw+nd+i-1) = xss(iw+i1+m+i-1)
          lw = lw+2*nd
-
-*-----------------------------------------------------------------------
-*     expunge the cosine arrays and redefine the lmu array.
-*-----------------------------------------------------------------------
-
       do 440 i = 1, nd
          ic = nint(xss(ib+i))
          if(ic.eq.0) goto 440
-
-*-----------------------------------------------------------------------
-*     ic>0 equiprobable bins; ic<0 tabulated function.
-*-----------------------------------------------------------------------
-
          if(ic.lt.0) goto 432
          xss(ib+i) = lw-jx(9)+1
       do 430 k = 1, 33
@@ -3298,11 +1914,6 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          lw = lw+nk
   440 continue
   450 continue
-
-*-----------------------------------------------------------------------
-*     expunge ldlw and move dlw.
-*-----------------------------------------------------------------------
-
          if(nx(5).eq.0) goto 480
          jx(10) = lw
          iw = 0
@@ -3315,16 +1926,12 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
   460 continue
          jx(11) = lw
          l = jxs(22,iex)-jxs(11,iex)+1
-
-*-----------------------------------------------------------------------
 !        the order of the data must be 23, 24, 12, 13, where:
 !           12 = photon production data
 !           13 = photon production reaction types (mt numbers)
 !           23 = probability table data
 !           24 = delayed neutron data
 !        out of order data can cause overwriting if all features on.
-*-----------------------------------------------------------------------
-
          if(jxs(13,iex).ne.0)
      &    l = min(l,jxs(13,iex)-jxs(11,iex))
          if(jxs(12,iex).ne.0)
@@ -3333,32 +1940,10 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
      &    l = min(l,jxs(24,iex)-jxs(11,iex))
          if(jxs(23,iex).ne.0)
      &    l = min(l,jxs(23,iex)-jxs(11,iex))
-
       do 470 i = 0, l-1
   470    xss(lw+i) = xss(jxs(11,iex)+i)
          if(iw.ne.0)jx(2) = lw+nint(xss(iw+1+lw))-1
          lw = lw+l
-
-*-----------------------------------------------------------------------
-*        expunge unresolved probability tables.
-*        l=jxs(23,iex) points to location for unres prob tables;
-*            xss(l)  = number of incident energies
-*            xss(l+1)= length of a table (usually 20)
-*            xss(l+2)= incident energy interpolation parameter (2 or 5)
-*            xss(l+3)= flag for inelastic (-1 none, 0 by balance,>0=mt)
-*            xss(l+4)= flag for "other absorption" (-1 none, etc.)
-*            xss(l+5)= flag for factors, if 0, regular cross sections
-*            followed by incident energies
-*            followed by tables for each incident energy (6 columns)
-*               cumulative probabilities
-*               total cross sections
-*               elastic cross sections
-*               fission cross sections
-*               capture cross sections (102)
-*               neutron heating numbers
-*        repeat for each incident energy.
-*-----------------------------------------------------------------------
-
   480    if(jxs(23,iex).eq.0) goto 483
          if(iunr.eq.0) goto 483
          if(jxs(23,iex).lt.lw) then
@@ -3366,15 +1951,12 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
             ierr = 1
             return
          end if
-
          l = jxs(23,iex)
-
          if(nint(xss(l+2)).ne.2.and.nint(xss(l+2)).ne.5) then
          write(iom,'(''Error : in unresolved table interpolation.'')')
             ierr = 1
             return
          end if
-
          if(xss(l+5+nint(xss(l))).gt.xunru)
      &                        xunru = xss(l+5+nint(xss(l)))
          jx(23) = lw
@@ -3382,32 +1964,23 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
       do 482 i = 0, in-1
   482    xss(lw+i) = xss(l+i)
          lw = lw+in
-
-*-----------------------------------------------------------------------
-*     expunge delayed neutron data.
-*-----------------------------------------------------------------------
-
   483    if(itotnu.ne.1.or.dnb.eq.0.) nx(8) = 0
          if(nx(8).eq.0) goto 488
-
          if(jxs(24,iex).lt.lw) then
          write(iom,'(''Error : delayed neutron data overwritten.'',a)')
      &      ht
             ierr = 1
             return
          end if
-
          jx(24) = lw
       do 484 i = 1, jxs(25,iex)-jxs(24,iex)
   484    xss(lw+i-1) = xss(jxs(24,iex)+i-1)
          lw = lw+jxs(25,iex)-jxs(24,iex)
          jx(25) = lw
-
       do 485 i = 1, jxs(26,iex)-jxs(25,iex)
   485    xss(lw+i-1) = xss(jxs(25,iex)+i-1)
          lw = lw+jxs(26,iex)-jxs(25,iex)
          jx(26) = lw
-
       do 486 i = 1, jxs(27,iex)-jxs(26,iex)
   486    xss(lw+i-1) = xss(jxs(26,iex)+i-1)
          lw = lw+jxs(27,iex)-jxs(26,iex)
@@ -3418,35 +1991,22 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
       do 487 i = 1, mo
   487     xss(lw+i-1) = xss(jxs(27,iex)+i-1)
           lw = lw+mo
-
-*-----------------------------------------------------------------------
-*     expunge gamma production cross sections and move energy table.
-*-----------------------------------------------------------------------
-
   488    if(mg.eq.0.or.jxs(12,iex).eq.0) goto 740
-
          if(jxs(12,iex).lt.lw) then
             write(iom,
      &      '(''Error : gamma production data overwritten.'',a)') ht
             ierr = 1
             return
          end if
-
          jx(12) = lw
       do 490 i = 1, nx(3)
   490    xss(lw+i-1) = xss(jxs(12,iex)+j1+i-2)
          lw = lw+nx(3)
          if(jxs(13,iex).ne.0) goto 510
-
       do 500 i = 1, 600
   500    xss(lw+i-1) = xss(jxs(12,iex)+nxs(3,iex)+i-1)
          lw = lw+600
          goto 740
-
-*-----------------------------------------------------------------------
-*     expunge the partial photon-production information if it exists.
-*-----------------------------------------------------------------------
-
   510 do 540 i = 1, nxs(6,iex)
          m2(i) = nint(xss(jxs(13,iex)+i-1))
          j = jxs(15,iex)+nint(xss(jxs(14,iex)+i-1))-1
@@ -3459,25 +2019,13 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
   530    nx(6) = nx(6)-1
          m2(i) = 0
   540 continue
-
-*-----------------------------------------------------------------------
-*     check that all phot-prod reactions needed for fm cards exist.
-*-----------------------------------------------------------------------
-
       do 560 i = 1, nr
          if(jf(i).le.1000) goto 560
       do 550 l = 1, nxs(6,iex)
   550    if(m2(l).eq.jf(i)) goto 560
-
          write(iom1,'(''## warning. '',
      &    ''fm/pert card rxn'',i8,'' is missing from '',a)') jf(i), ht
-
   560 continue
-
-*-----------------------------------------------------------------------
-*     expunge the mtrp and lsigp arrays.
-*-----------------------------------------------------------------------
-
       do 580 i = 13, 14
          jx(i) = lw
       do 570 n = 1, nxs(6,iex)
@@ -3486,13 +2034,7 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          lw = lw+1
   570 continue
   580 continue
-
-*-----------------------------------------------------------------------
-*     expunge sigp array and redefine lsigp array.
-*-----------------------------------------------------------------------
-
          jx(15) = lw
-
       do 640 j = 1, nx(6)
          ib = jxs(15,iex)+nint(xss(jx(14)+j-1))-1
          xss(jx(14)+j-1) = lw-jx(15)+1
@@ -3509,15 +2051,9 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
   590    xss(lw+i+1) = xss(lr+i-1)
          lw = lw+nint(xss(lw+1))+2
          goto 640
-
-*-----------------------------------------------------------------------
-*     translate neutron mt number to neutron mt index.
-*-----------------------------------------------------------------------
-
   600    mt = nint(xss(ib))
          i = -18
          if(mt.eq.18) goto 620
-
       do 610 i = 1, nx(4)
   610    if(nint(xss(jx(3)+i-1)).eq.mt) goto 620
   620    xss(ib) = i
@@ -3526,22 +2062,12 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
   630    xss(lw+i-1) = xss(ib+i-1)
          lw = lw+n
   640 continue
-
-*-----------------------------------------------------------------------
-*     expunge the landp array.
-*-----------------------------------------------------------------------
-
          jx(16) = lw
       do 650 i = 1, nxs(6,iex)
          if(m2(i).eq.0) goto 650
          xss(lw) = xss(jxs(16,iex)+i-1)
          lw = lw+1
   650 continue
-
-*-----------------------------------------------------------------------
-*     expunge andp array and redefine landp array.
-*-----------------------------------------------------------------------
-
          jx(17) = lw
       do 710 j = 1, nx(6)
          i = jx(16)+j-1
@@ -3551,7 +2077,6 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          m = nint(xss(iw))
          i1 = 1
          i2 = 1
-
       do 660 i = 1, m
          if(xss(iw+i).le.ec) i1 = i
   660    if(xss(iw+i).lt.em) i2 = min(i+1,m)
@@ -3559,7 +2084,6 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          xss(lw) = nd
          ib = lw+nd
          lw = lw+1
-
       do 670 i = 1, nd
   670    xss(lw+i-1)  =xss(iw+i1+i-1)
       do 680 i = 1, nd
@@ -3584,11 +2108,6 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
   700 continue
   710 continue
          if(jx(17).eq.lw) jx(16) = 0
-
-*-----------------------------------------------------------------------
-*     expunge ldlwp array and move dlwp array.
-*-----------------------------------------------------------------------
-
          jx(18) = lw
       do 720 n = 1, nxs(6,iex)
          if(m2(n).eq.0) goto 720
@@ -3601,11 +2120,6 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
       do 730 i = 1, ns
   730    xss(lw+i-1) = xss(jxs(19,iex)+i-1)
          lw = lw+ns
-
-*-----------------------------------------------------------------------
-*     process pikmt parameters.
-*-----------------------------------------------------------------------
-
   740    if(npikmt.eq.0) goto 800
          nxs(15,iex) = -1
          read(ht,'(e9.0)') tr
@@ -3614,20 +2128,16 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          ip = ip+2+2*max(0,int(pik(ip+1)))
          if(ip.lt.lpik+npikmt) goto 750
          goto 800
-
   760    np = pik(ip+1)
          nxs(15,iex) = np
          if(np.lt.0) goto 800
-
          if(jxs(13,iex).eq.0) then
             write(iom,'(/''Error : pikmt does not work for '',a)') ht
             ierr = 1
             return
          end if
-
          if(jxs(13,iex).eq.0.or.np.eq.0) goto 800
          jxs(29,iex) = lw
-
       do 790 i = 1, np
       do 770 j = 1, nxs(6,iex)
   770    if(pik(ip+2*i).eq.xss(jx(13)+j-1)) goto 780
@@ -3635,39 +2145,18 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
      &                '' does not exist for '',a)') int(pik(ip+2*i)),ht
             ierr = 1
             return
-
   780    xss(lw+2*i-2) = j
   790    xss(lw+2*i-1) = pik(ip+2*i+1)
          lw = lw+2*np
-
-*-----------------------------------------------------------------------
-*     expunge other particle data
-*-----------------------------------------------------------------------
-
   800 continue
          if(nxs(7,iex).eq.0) goto 801
       do 802 i = 1, nxs(7,iex)
          m2(i) = nint(xss(jxs(30,iex)+i-1))
-
-*-----------------------------------------------------------------------
-*     make sure that energy grid overlaps (j1,j2)
-*-----------------------------------------------------------------------
-
          j = ixs(1,i,iex)
          if(j2.le.nint(xss(j)).or.j1.ge.nint(xss(j))+nint(xss(j+1))-1)
      &    goto 799
-
-*-----------------------------------------------------------------------
-*     is this particle required for transport
-*-----------------------------------------------------------------------
-
       do 803 j = 1, mipt
   803    if(kpt(j).ne.0.and.j.eq.m2(i)) goto 804
-
-*-----------------------------------------------------------------------
-*     this particle not needed for transport --> expunge data
-*-----------------------------------------------------------------------
-
   799    write(iom1,805) m2(i), ht
   805    format(34h particle-production data for ipt=,i3,
      &    21h being expunged from ,a10)
@@ -3678,25 +2167,14 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
   806    format(34h particle-production data for ipt=,i3,
      &   17h being used from ,a10)
   802    continue
-
-*-----------------------------------------------------------------------
-*     are we missing data for desired particles
-*-----------------------------------------------------------------------
-
   801 do 807 i = 4, mipt
          if(kpt(i).ne.1) goto 807
-
       do 808 j = 1, nxs(7,iex)
   808    if(i.eq.m2(j)) goto 807
          write(iom1,809) i, ht
   809    format(37h no particle-production data for ipt=,i3,
      &    6h from ,a10)
   807    continue
-
-*-----------------------------------------------------------------------
-*     expunge ptype, ntro blocks
-*-----------------------------------------------------------------------
-
          if(nx(7).eq.0) goto 811
       do 812 i = 30, 31
          jx(i) = lw
@@ -3707,21 +2185,11 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
   813 continue
   812 continue
          jx(32) = 0
-
-*-----------------------------------------------------------------------
-*     expunge or copy actual data blocks for secondary particles
-*-----------------------------------------------------------------------
-
          ik=0
       do 814 i = 1, nxs(7,iex)
          if(m2(i).eq.0) goto 814
          ik = ik+1
          ix(1,ik) = lw
-
-*-----------------------------------------------------------------------
-*     expunge hpd block
-*-----------------------------------------------------------------------
-
          ib = ixs(1,i,iex)
          jb = nint(xss(ib))+nint(xss(ib+1))-1
          ic = max(nint(xss(ib)),j1)
@@ -3729,15 +2197,12 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          xss(lw) = ic-j1+1
          xss(lw+1) = min(jb,j2)-ic+1
       do 815 j = 1, nint(xss(lw+1))
-
        if ( lionprd .eq. 0 ) then
           xss(lr+j+1+nint(xss(ib+1))-nint(xss(lw+1))) = 0d0
-
        else if ( lionprd .eq. 1 ) then
         if(ih.eq.1) xss(jxs(1,iex)+4*nx(3)+nint(xss(lw))-2+j) =
      &         xss(jxs(1,iex)+4*nx(3)+nint(xss(lw))-2+j)-
      &         xss(lr+j+1+nint(xss(ib+1)))
-
        else if ( lionprd .eq. -1 ) then
         if ( xss(jxs(1,iex)+nint(xss(lw))-2+j) .lt. 20.00001d0 ) then
           xss(lr+j+1+nint(xss(ib+1))-nint(xss(lw+1))) = 0d0
@@ -3747,15 +2212,9 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
      &          xss(jxs(1,iex)+4*nx(3)+nint(xss(lw))-2+j)-
      &          xss(lr+j+1+nint(xss(ib+1)))
         end if
-
        end if
   815    xss(lw+j+1) = xss(lr+j+1)
          lw = lw+2+nint(xss(lw+1))
-
-*-----------------------------------------------------------------------
-*     decide whether to expunge reactions
-*-----------------------------------------------------------------------
-
          nr = nint(xss(jx(31)+ik-1))
          if(nr.gt.m3) then
             write(iom,'(/''Error : dimension overflow in expung.'',
@@ -3763,25 +2222,14 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
             ierr = 1
             return
          end if
-
       do 816 j = 1, nr
          ml(j) = nint(xss(ixs(2,i,iex)+j-1))
       do 817 k = 1, nx(4)
   817    if(ml(j).eq.nint(xss(jx(3)+k-1))) goto 816
          ml(j) = 0
          xss(jx(31)+ik-1) = xss(jx(31)+ik-1)-1
-
-*-----------------------------------------------------------------------
-*    translate neutron mt number to neutron mt index.
-*-----------------------------------------------------------------------
-
   816    if(ml(j).ne.0) xss(ixs(5,i,iex) +
      &    nint(xss(ixs(4,i,iex)+j-1))) = k
-
-*-----------------------------------------------------------------------
-*     expunge mtrh, tyrh, and lsigh blocks
-*-----------------------------------------------------------------------
-
          ix(2,ik) = lw
          ix(3,ik) = lw+nint(xss(jx(31)+ik-1))
          ix(4,ik) = lw+2*nint(xss(jx(31)+ik-1))
@@ -3791,70 +2239,35 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          xss(lw) = xss(ixs(j,i,iex)+k-1)
          lw = lw+1
   818 continue
-
-*-----------------------------------------------------------------------
-*     copy the sigh block
-*-----------------------------------------------------------------------
-
          ix(5,ik) = lw
          nw = ixs(6,i,iex)-ixs(5,i,iex)
       do 819 j = 1, nw
   819    xss(lw+j-1) = xss(ixs(5,i,iex)+j-1)
          lw = lw+nw
-
-*-----------------------------------------------------------------------
-*     expunge the landh block
-*-----------------------------------------------------------------------
-
          ix(6,ik) = lw
       do 821 k = 1, nr
          if(ml(k).eq.0) goto 821
          xss(lw) = xss(ixs(6,i,iex)+k-1)
          lw = lw+1
   821 continue
-
-*-----------------------------------------------------------------------
-*     copy the andh block
-*-----------------------------------------------------------------------
-
          ix(7,ik) = lw
          nw = ixs(8,i,iex)-ixs(7,i,iex)
       do 822 j = 1, nw
   822    xss(lw+j-1) = xss(ixs(7,i,iex)+j-1)
          lw = lw+nw
-
-*-----------------------------------------------------------------------
-*     expunge the ldlwh block
-*-----------------------------------------------------------------------
-
          ix(8,ik) = lw
       do 823 k = 1, nr
          if(ml(k).eq.0) goto 823
          xss(lw) = xss(ixs(8,i,iex)+k-1)
          lw = lw+1
   823 continue
-
-*-----------------------------------------------------------------------
-*     copy the dlwh block
-*-----------------------------------------------------------------------
-
          ix(9,ik) = lw
          nw = ixs(10,i,iex)-ixs(9,i,iex)
       do 824 j = 1, nw
   824    xss(lw+j-1) = xss(ixs(9,i,iex)+j-1)
          lw = lw+nw
-
-*-----------------------------------------------------------------------
-*     don't need the yh block
-*-----------------------------------------------------------------------
-
          ix(10,ik) = 0
   814 continue
-
-*-----------------------------------------------------------------------
-*     set up the modified pointers and counters.
-*-----------------------------------------------------------------------
-
   811 do 810 i = 2, 27
   810    jxs(i,iex) = jx(i)
          jxs(22,iex) = lw-1
@@ -3866,13 +2279,7 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          nxs(1,iex) = lw-jxs(1,iex)
       do 820 i = 3, 8
   820    nxs(i,iex) = nx(i)
-
-*-----------------------------------------------------------------------
-*     integrate the part below energy cutoff of law 4 distributions.
-*-----------------------------------------------------------------------
-
          if(jxs(13,iex).eq.0) return
-
       do 880 j = 1, nxs(6,iex)
          n = jxs(18,iex)+j
   830    n = jxs(19,iex)+nint(xss(n-1))
@@ -3880,16 +2287,10 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          iw = jxs(19,iex)+nint(xss(n+1))-1
          nr = iw+2*nint(xss(iw))+1
          ng = nint(xss(nr))
-
       do 860 ic=1,ng
          lb = jxs(19,iex)+nint(xss(nr+ng+ic))
          if(xss(lb+1).ge.ecf(2)) goto 860
          jj = nint(xss(lb-1))
-
-*-----------------------------------------------------------------------
-*     for now, don't integrate if discrete lines are mixed in.
-*-----------------------------------------------------------------------
-
          if(jj.gt.2) goto 860
          np = nint(xss(lb))
          xss(lb-1) = 9999
@@ -3904,83 +2305,35 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
   860 continue
   870    if(nint(xss(n-1)).ne.0) goto 830
   880 continue
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-
-************************************************************************
-*                                                                      *
       subroutine xstfpt(iom,ierr)
-*                                                                      *
-*       sum the type 19 fission cross sections, put the totals after   *
-*       the rest of the cross sections, and recalculate the locators.  *
-*       this table is required if the problem has any type 7 tallies;  *
-*       has any cells where fission is treated as capture; is a        *
-*       mode n p problem with some expanded photon-production tables;  *
-*       has any fm cards with pseudo-reactions -6, -7, or -8; or is a  *
-*       kcode problem.                                                 *
-*                                                                      *
-*       Last modified by K.Niita on 2009/09/08                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-*     find min and max energy indices over all fission reactions.
-*-----------------------------------------------------------------------
-
          mi = 100000
          ma = 0
-
       do 10 j = 1, nxs(5,iex)
          if( nint(xss(jxs(5,iex)+j-1)) .ne. 19 ) goto 10
          is = jxs(7,iex) + nint(xss(jxs(6,iex)+j-1))
          mi = min(mi,nint(xss(is-1)))
          ma = max(ma,nint(xss(is-1))+nint(xss(is))-1)
    10 continue
-
          if( ma .eq. 0 ) return
-
-*-----------------------------------------------------------------------
-*     form fsig list beginning at location fis=end+1
-*-----------------------------------------------------------------------
-
          kf = jxs(22,iex) + 2
          xss(kf-1) = mi
          xss(kf) = ma - mi + 1
          mc = kf + ma - mi + 5
-
-
-
       if( mdas .lt. mc ) then
          write(iom,'(/
      &       ''<<< Memory ERROR : at xstfpt >>>'',i9)') mc
          ierr = 1
          return
       end if
-
-*-----------------------------------------------------------------------
-*     zero the fission cross section storage for accumulation.
-*-----------------------------------------------------------------------
-
          do 20 i = 1, ma - mi + 1
    20    xss(kf+i) = 0.
-
-*-----------------------------------------------------------------------
-*     accumulate fission cross sections for all fission reactions in
-*     corresponding locations of fsig list.
-*-----------------------------------------------------------------------
-
       do 40 j = 1, nxs(5,iex)
          if( nint(xss(jxs(5,iex)+j-1)) .ne. 19 ) goto 40
          is = jxs(7,iex) + nint(xss(jxs(6,iex)+j-1))
@@ -3988,60 +2341,23 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
       do 30 i = 1, nint(xss(is))
    30    xss(ir+i) = xss(ir+i) + xss(is+i)
    40 continue
-
-*-----------------------------------------------------------------------
-*     assign new values to fis, end, and table length.
-*-----------------------------------------------------------------------
-
       jxs(21,iex) = jxs(22,iex) + 1
       jxs(22,iex) = jxs(22,iex) + ma - mi + 3
       nxs(1,iex)  = nxs(1,iex) + ma - mi + 3
-
       return
       end
-
-
-************************************************************************
-*                                                                      *
       subroutine mgxst(hn,iom,ierr)
-*                                                                      *
-*       process multigroup cross-section table iex.                    *
-*       return 'total nu' or 'prompt nu' in hn if appropriate.         *
-*                                                                      *
-*       Last modified by K.Niita on 2009/09/08                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       common /kmat1o/ iom1, iom2, iom3
-
-*-----------------------------------------------------------------------
-
       character hn*9,ht*10
-
-*-----------------------------------------------------------------------
-*     set up the particle type and the number of energy groups.
-*-----------------------------------------------------------------------
-
          call zaid(2,ht,ixl(1,iex))
-
          jp = max(1,nxs(12,iex))
          jgm(jp) = nxs(5,iex)
          mgegbt(jp) = iex
-
-*-----------------------------------------------------------------------
-*     check use of tally cross sections by fm-card tallies.
-*-----------------------------------------------------------------------
-
       do 70 it = 1, ntal
          iv=  iptal(5,1,it)
          if( iv .eq. 0 .or. ktp(jp,it) .eq. 0 ) goto 70
@@ -4062,106 +2378,68 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          if( n2 .eq. 1 ) i1 = tds(ip+j)
          if( i1 .eq. 1000003 ) goto 30
          i2 = max(min(-i1,7),1)
-
          if( i1 .eq. -i2 .and. jxs(1+i2,iex) .ne. 0 )
      &    write(iom1,'(''## warning. reaction mt ='',i3,
      &    '' has new meaning in ver. 4b.'')') i1
          if( i1 .eq. -i2 .and. jxs(1+i2,iex) .ne. 0 ) goto 30
-
       do 10 k = 1, nxs(4,iex)
    10    if( abs(nint(xss(jxs(9,iex)-1+k))) .eq. i1 ) goto 20
-
          write(iom1,'(''## warning. reaction '',i3,'' for'',a,
      &    '' does not exist. fm'',i3)') i1,ht,jptal(1,it)
-
          goto 30
-
    20    xss(jxs(9,iex)-1+k) = -abs(nint(xss(jxs(9,iex)-1+k)))
    30 continue
    40 continue
    50 continue
    60 continue
    70 continue
-
-*-----------------------------------------------------------------------
-*     check use of tally cross sections by heating tallies.
-*-----------------------------------------------------------------------
-
       do 140 it = 1, ntal
          n1 = jptal(2,it) - 5
          if( n1 .lt. 1 .or. n1 .ge. 3 .or.
      &       ktp(jp,it) .eq. 0 ) goto 140
-
       do 130 l = 1, iptal(1,3,it)
          ip = itds(iptal(1,1,it)+l)
-
       do 120 j2 = 1, itds(ip)
          j = mat(itds(ip+j2))
-
       do 110 m = jmd(1+j), jmd(1+j+1) - 1
          if( lme(jp,m) .ne. iex ) goto 110
-
       do 100 j = 1, n1
          i1 = 401
          if( n1 .eq. 2 .and. j .eq. 1 ) i1 =  18
          if( n1 .eq. 2 .and. j .eq. 2 ) i1 = 318
-
          do 80 k = 1, nxs(4,iex)
    80       if( abs(nint(xss(jxs(9,iex)-1+k))) .eq. i1 ) goto 90
             write(iom1,'(''## warning. reaction '',i3,'' for'',a,
      &      '' does not exist.  f'',i3)') i1,ht,jptal(1,it)
-
             goto 100
-
    90    xss(jxs(9,iex)-1+k) = -abs(nint(xss(jxs(9,iex)-1+k)))
-
   100 continue
   110 continue
   120 continue
   130 continue
   140 continue
-
-*-----------------------------------------------------------------------
-*     expunge unwanted tally cross sections.
-*-----------------------------------------------------------------------
-
          n = 0
-
       do 160 k = 1, nxs(4,iex)
          if( nint(xss(jxs(9,iex)-1+k)) .gt. 0 ) goto 160
          n = n + 1
          xss(jxs(9,iex)-1+n) = -nint(xss(jxs(9,iex)-1+k))
-
       do 150 i = 1, nxs(5,iex)
   150    xss(jxs(10,iex)-1+(n-1)*nxs(5,iex)+i)
      &   = xss(jxs(10,iex)-1+(k-1)*nxs(5,iex)+i)
-
   160 continue
-
       call mgex(jxs(9,iex)+n,nxs(4,iex)-n)
       call mgex(jxs(10,iex)+n*nxs(5,iex),
      &          nxs(5,iex)*(nxs(4,iex)-n))
-
          nxs(4,iex) = n
-
-*-----------------------------------------------------------------------
-*     check and expunge secondary production cross sections.
-*-----------------------------------------------------------------------
-
          ms = 1
-
       do 180 ip = 1, mipt
          if( kpt(ip) .eq. 0 .or. ip .eq. jp .or. ip .eq. 1 ) goto 180
-
       do 170 i = 1, nxs(8,iex)
   170    if( nint(xss(jxs(11,iex)+i-1)) .eq. ip ) goto 180
-
          write(iom1,*)
      & '## warning. no '//hnp(ip)//' production cross sections in '//ht
-
          ms = 0
   180 continue
-
       do 210 k = 1, nxs(8,iex)
          if( kpt(nint(xss(jxs(11,iex)+k-1))) .ne. 0 ) goto 210
          l = jxs(1,iex)-1+nint(xss(jxs(16,iex)+k))
@@ -4169,7 +2447,6 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
      &            + nint(xss(jxs(12,iex)+k-1))))
          if( nint(xss(jxs(16,iex)+k)) .eq. 0 ) goto 200
          m = 0
-
       do 190 i = 1, n * nxs(5,iex)
   190    m = max(m,nint(xss(l+i-1)))
          i = m + nint(xss(jxs(15,iex)+k-1)) - 1
@@ -4180,9 +2457,7 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
      &             n*nxs(5,iex))
          call mgex(jxs(1,iex)-1+nint(xss(jxs(12,iex)+k-1)),
      &             2*n+1)
-
   210 continue
-
          n = 0
       do 220 k = 1, nxs(8,iex)
          if( kpt(nint(xss(jxs(11,iex)+k-1))) .eq. 0 ) goto 220
@@ -4196,57 +2471,34 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          xss(jxs(17,iex)+n) = nint(xss(jxs(17,iex)+k))
   220 continue
          nxs(8,iex) = n
-
-*-----------------------------------------------------------------------
-*     expunge prompt or total nubar table.
-*-----------------------------------------------------------------------
-
       if( nxs(10,iex) .eq. 0 ) goto 230
       if( nxs(10,iex) .eq. 1 ) write(iom1,*)
      &   '## warning. nubar of '//ht//' may be either prompt or total.'
       if( nxs(10,iex) .eq. 1 ) goto 230
-
       if( itotnu .ne. 1 ) call mgex(jxs(4,iex)+nxs(5,iex),
      &                              nxs(5,iex))
       if( itotnu .ne. 1 ) hn = 'prompt nu'
       if( itotnu .eq. 1 ) call mgex(jxs(4,iex),nxs(5,iex))
       if( itotnu .eq. 1 ) hn = 'total nu'
-
          nxs(10,iex) = 1
-
-*-----------------------------------------------------------------------
-*     create table of indexes into p0 and xpn tables.
-*-----------------------------------------------------------------------
-
   230    m = 1
-
       if( mcal .eq. 1 ) m = 2
       if( mcal .eq. 1 .and. kpt(1) .ne. 0 .and.
      &    kpt(2) .ne. 0 .and. jp .eq. 1 .and.
      &    ms .ne. 0 ) m = 3
          mc = lxss + nxs(1,iex) + m * nxs(5,iex) + 4
-
-
-
       if( mc .gt. mdas ) then
          write(iom,'(/
      &       ''<<< Memory ERROR : at mgex >>>'',i9)') mc
          ierr = 1
          return
       end if
-
          jxs(18,iex) = jxs(1,iex) + nxs(1,iex)
          xss(jxs(18,iex)) = 1
-
       do 240 j = 1, nxs(5,iex) - 1
   240    xss(jxs(18,iex)+j) = nint(xss(jxs(18,iex)+j-1))
      &   + min(j,nxs(6,iex)+1)
      &   + min(nxs(5,iex)-j,nxs(7,iex))
-
-*-----------------------------------------------------------------------
-*     add up the scattering and photon production cross sections.
-*-----------------------------------------------------------------------
-
          if( m .eq. 1 ) goto 290
          jxs(19,iex) = jxs(18,iex) + nxs(5,iex)
          n = 0
@@ -4255,223 +2507,111 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          jxs(20,iex) = jxs(19,iex) + nxs(5,iex)
          n = nint(xss(jxs(1,iex)-1+nint(xss(jxs(12,iex)))))
          k = jxs(1,iex) + nint(xss(jxs(13,iex)+1)) - 2
-
   250 do 260 i = 1, nxs(5,iex) * ( m - 1 )
   260    xss(jxs(19,iex)-1+i) = 0.
-
       do 280 j = 1, nxs(5,iex)
       do 270 i = 1, min(j,nxs(6,iex)+1)+min(nxs(5,iex)-j,
      &                                           nxs(7,iex))
          xss(jxs(19,iex)-1+j) = xss(jxs(19,iex)-1+j)+xss(l)
   270    l = l + 1
-
       do 280 i = 1, n
   280    xss(jxs(20,iex)-1+j) = xss(jxs(20,iex)-1+j)
      &                             + xss(k+(j-1)*n+i)
-
   290    nxs(1,iex) = nxs(1,iex) + m * nxs(5,iex)
-
-*-----------------------------------------------------------------------
-*     for an adjoint problem, optionally adjust data by group widths.
-*-----------------------------------------------------------------------
-
          if( mcal .ne. 2 .or. img .eq. 0 )return
-
          k = jxs(1,iex) + nint(xss(jxs(13,iex))) - 2
          l = 1
-
       do 320 i = 1, nxs(5,iex)
          d = xss(jxs(1,iex) + nxs(5,iex)+i-1)
          if( jxs(5,iex) .eq. 0 ) goto 300
-
          xss(jxs(5,iex)+i-1) = xss(jxs(5,iex)+i-1) / d
          xss(jxs(4,iex)+i-1) = xss(jxs(4,iex)+i-1) * d
-
   300 do 310 j = max(1,i-nxs(6,iex)), min(nxs(5,iex),
      &                                         i+nxs(7,iex))
          xss(k+l) = xss(k+l) * d / xss(jxs(1,iex)
      &            + nxs(5,iex)+j-1)
   310    l = l + 1
-
       do 320 m = 1, nxs(8,iex)
          l2 = jxs(1,iex) + nint(xss(jxs(12,iex)+m-1)) - 1
          k2 = jxs(1,iex) + nint(xss(jxs(13,iex)+m)) - 2
-
       do 320 j = 1, int(xss(l2))
   320    xss(k2+j) = xss(k2+j) * d / xss(l2+nint(xss(l2))+j)
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-
-************************************************************************
-*                                                                      *
       subroutine mgex(l,n)
-*                                                                      *
-*       remove n words of multigroup cross-section table iex,          *
-*       starting at location l, and adjust locators.                   *
-*                                                                      *
-*       Last modified by K.Niita on 2009/09/16                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       do 10 i = l, jxs(1,iex) + nxs(1,iex) - 1 - n
    10    xss(i) = xss(i+n)
-
       do 20 i = 1, 17
    20    if( jxs(i,iex) .gt. l )
      &   jxs(i,iex) = jxs(i,iex) - n
-
       do 30 i = jxs(12,iex), jxs(12,iex) + nxs(8,iex) - 1
    30    if( jxs(1,iex) + nint(xss(i)) - 1 .gt. l )
      &   xss(i) = xss(i) - n
-
       do 40 i = jxs(13,iex), jxs(13,iex) + nxs(8,iex)
    40    if( jxs(1,iex) + nint(xss(i)) - 1 .gt. l )
      &   xss(i) = xss(i) - n
-
       do 50 i = jxs(16,iex), jxs(16,iex) + nxs(8,iex)
    50    if( jxs(1,iex) + nint(xss(i)) - 1 .gt. l )
      &   xss(i) = xss(i) - n
-
       do 60 i = jxs(17,iex), jxs(17,iex) + nxs(8,iex)
    60    if( jxs(1,iex) + nint(xss(i)) - 1 .gt. l )
      &   xss(i) = xss(i) - n
-
          nxs(1,iex) = nxs(1,iex) - n
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-
-************************************************************************
-*                                                                      *
       subroutine xstel(nt,iom,ierr)
-*                                                                      *
-*       generate electron cross-section tables for all the materials.  *
-*       nt = number of elementary electron cross-section tables        *
-*                                                                      *
-*       Last modified by K.Niita on 2009/10/06                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       common /kmat1o/ iom1, iom2, iom3
-
-*-----------------------------------------------------------------------
-
       dimension ns(94),al(maxi),p(243,4)
       data ns/5*2,4*3,3*4,9*5,7*6,11*7,10*8,5*9,10*10,5*11,9*12,6*13,
      & 7*14,3*15/
       data al/0.,1.,2.,3.,4.,5.,6.,7.,8.,9.,12.,15.,18.,21.,24.,27.,30.,
      & 35.,40.,45.,50.,60.,70.,80.,90.,100.,110.,120.,130.,140.,150.,
      & 160.,170.,180./
-
-*-----------------------------------------------------------------------
-*     c1 = 1.0e+24 * h**2 * c**2 * alpha**2 / (2 * pi * m * c**2),
-*-----------------------------------------------------------------------
-
          c0 = 1.d12 * planck * slite / fscon
          c1 = c0 * c0 / (2*pie*gpt(3))
-
-*-----------------------------------------------------------------------
-
       iuo = iom1
       ink(85) = 0
       ink(86) = 0
-
-*-----------------------------------------------------------------------
-*     integrated tiger series (its) method before its3.0.
-*-----------------------------------------------------------------------
-
          nstp = mstp
          if( its30 .eq. 3 ) goto 14
-
          ntop = 49
          nwng = 25
          nstp = 8
-
       do 10 i = 1, mtop
    10    rkt(i) = rktc(i)
-
       do 12 i = 1, nwng
    12    rka(i) = rkt(ntop-2*i+2)
-
-*-----------------------------------------------------------------------
-*     prepare the elementary cross-section tables.
-*-----------------------------------------------------------------------
-
    14 do 80 j = mxe+1, mxe + nt
          z = nxs(2,j)
-
-*-----------------------------------------------------------------------
-*     prepare for log interpolation in energy.
-*     .000579=(electron_radius)**2/fine_structure_constant*1e24
-*-----------------------------------------------------------------------
-*     pre its3.0 method:
-*-----------------------------------------------------------------------
-
          if( nxs(16,j) .eq. 3 ) goto 24
-
       do 16 i = 1, nxs(3,j)
          exs(jxs(2,j)+i-1) = log(exs(jxs(2,j)+i-1)/gpt(3))
    16    exs(jxs(2,j)+nxs(3,j)+i-1) =
      &       .000579*z*(z+1.)*exs(jxs(2,j)+nxs(3,j)+i-1)
-
       do 18 i = 1, nxs(5,j)
    18    exs(jxs(5,j)+i-1) = log(exs(jxs(5,j)+i-1)/gpt(3))
-
       do 20 i = 1, nxs(6,j)
          exs(jxs(6,j)+i-1) = log(exs(jxs(6,j)+i-1)/gpt(3))
    20    exs(jxs(6,j)+nxs(6,j)+i-1) =
      &      log(.001*z**2*exs(jxs(6,j)+nxs(6,j)+i-1))
-
          goto 36
-
-*-----------------------------------------------------------------------
-*     its3.0 and later method:
-*     z+1 has been replaced with z+eta, where eta accounts
-*     for electron-electron bremsstrahlung.
-*     "cross sections for bremsstrahlung production and electron-
-*     impact ionization," s. m. selzter, in monte carlo transport
-*     of electrons and photons, t. m. jenkins, w. r. nelson, and
-*     a. rindi, eds.
-*     for tracking, approximate the classical electron radius as
-*     cr=planck*slite/(2*pie*fscon*gpt(3))=2.8179380d-13.
-*-----------------------------------------------------------------------
-
    24    cr = 2.8179380d-13
          f = cr * cr / fscon * 1.d24
-
       do 26 i = 1, nxs(3,j)
          exs(jxs(2,j)+i-1) = log(exs(jxs(2,j)+i-1)/gpt(3))
          f1 = exs(jxs(2,j)+2*nxs(3,j)+i-1)
    26    exs(jxs(2,j)+nxs(3,j)+i-1) =
      &         f*z*(z+f1)*exs(jxs(2,j)+nxs(3,j)+i-1)
-
       if(nxs(9,j).gt.mtop) then
          write(iom,'(/''Error : electron library error:'',
      &                '' nxs(9) greater than mtop.'',2i9)')
@@ -4479,11 +2619,9 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          ierr = 1
          return
       end if
-
          if( ntop .ne. 0 ) goto 36
          ntop = nxs(9,j)
          nwng = nxs(10,j)
-
       if(nwng.gt.34) then
          write(iom,'(/''Error : electron library error:'',
      &                '' nxs(10) greater than 34.'',2i9)')
@@ -4491,27 +2629,17 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          ierr = 1
          return
       end if
-
          if( bbrem(1) .eq. 0. ) goto 32
          n7 = max(1,ntop-47)
-
       do 28 i = ntop, n7, -1
    28    eba(i,1) = bbrem(49-ntop+i)
-
          n8 = max(1,ntop-48)
-
       do 30 i = n8, 1, -1
          eba(i,1) = bbrem(1) + (bbrem(2)-bbrem(1))*
      &      (exs(jxs(9,j)+i-1)-exs(jxs(9,j))) /
      &      (exs(jxs(9,j)+n8)-exs(jxs(9,j)))
    30    if( eba(i,1) .le. 0. )
      &       eba(i,1) = max(bbrem(1),eba(1,1))
-
-*-----------------------------------------------------------------------
-*     load photon energy ratios from database into fixed arrays.
-*     also load in interpolated bbrem values if needed.
-*-----------------------------------------------------------------------
-
    32 do 34 i = 1, nxs(9,j)
          rkt(i) = exs(jxs(9,j)+i-1)
          if( i .le. nxs(10,j) ) rka(i) = exs(jxs(10,j)+i-1)
@@ -4519,11 +2647,6 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          bbrem(i) = eba(i,1)
          eba(i,1) = 0.
    34 continue
-
-*-----------------------------------------------------------------------
-*     set up table for low energy single scattering calculation.
-*-----------------------------------------------------------------------
-
    36 do 70 n = 1, 9
          b = exs(jxs(4,j)+14*(n-1)+13)
          db = 24. * (b*(1.+b))**3
@@ -4532,19 +2655,15 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          p(3,4) = (1.-10.*(1.+b)**2) * p(1,4) + (15.+20.*b) * p(2,4)/3.
      &          + 2.5 * (log((1.+b)/b)-(1./(1.+b)))
          a = 2. * b * (1.+3.*b+3.*b**2) / db
-
       do 40 l = 4, 243
    40    p(l,4) = ((1.+2.*b)*(2*l-1)*p(l-1,4)-(l+2)*p(l-2,4)-a*(2*l-1))
      &          / (l-3)
-
       do 50 k = 1, 3
          p(243,4-k) = 1.
          p(1,4-k) = 2. * ((1.+b) * p(1,5-k) - third * p(2,5-k))
-
       do 50 l = 2, 242
    50    p(l,4-k) = (1.+2.*b) * p(l,5-k) + p(1,5-k)
      &            - ((l+1)*p(l+1,5-k)+l*p(l-1,5-k)) / (2*l+1)
-
       do 70 l = 1, 240
          t = 2. * exs(jxs(4,j)+14*(n-1)+6)
       do 60 m = 1, 4
@@ -4553,31 +2672,14 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
      &                    / (2*l+1)
    70    if( t .gt. 0. ) exs(jxs(7,j)+l-1+240*(n-1))
      &                   = log(2.*pie*t*exs(jxs(4,j)+14*(n-1)+1))
-
-*-----------------------------------------------------------------------
-*     set up some functions of z.
-*-----------------------------------------------------------------------
-
       exs(jxs(8,j)) = z**third
       exs(jxs(8,j)+1) = log(z)
       zf = (z/fscon)**2
-
    80 exs(jxs(8,j)+2) = zf * (1./(1.+zf)+.20206
      &                     - zf * (.0369-zf*(.0083-zf*.002)))
-
-*-----------------------------------------------------------------------
-*     set up cosines of multiple-scattering group boundaries.
-*-----------------------------------------------------------------------
-
       do 90 m = 1, maxi
    90    calph(m) = cos(al(m)*pie/180.)
-
-*-----------------------------------------------------------------------
-*     set up the energy grid and start the knock-on cross sections.
-*-----------------------------------------------------------------------
-
          eee(1) = emx(3)
-
       do 110 i = 1, nee
          if( i .gt. 1 ) eee(i) = efac * eee(i-1)
          if( eee(i) .le. 2.*ecf(3) ) goto 110
@@ -4587,37 +2689,20 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          ru = 1./as-1./(1.-as)+(1.-ag)*log(as/(1.-as))
          pru(i) = ru / (ru+ag*(.5-as))
          cc = .5 * (ru+ag*(.5-as)) * (s+1.)**2 / (s**2*(s+2.))
-
       do 100 mkc = 1, nmat
   100    pkn(i+nee*(mkc-1)) = cc
-
   110 continue
-
-*-----------------------------------------------------------------------
-*     do all the electron materials in the problem.
-*-----------------------------------------------------------------------
-
       do 180 mkc = 1, nmat
       do 120 i = 1, mxa
   120    if( mat(i) .eq. mkc .and.
      &     ( fim(3,i) .ne. 0. .or. kpt(3) .eq. 0. and.
      &       fim(2,i) .ne. 0 ) ) goto 130
       goto 180
-
-*-----------------------------------------------------------------------
-*     calculate the average z, average atomic weight, and
-*     mass averages of z**(4/3) and z**2.
-*     istern is a flag for the sbs density effect treatment and if
-*     non-zero is the memory offset.
-*-----------------------------------------------------------------------
-
   130    az = 0.
          aa = 0.
          q  = 0.
          zq = 0.
-
          if( nxs(16,lme(3,jmd(1+mkc))) .eq. 3 ) istern = 1
-
       do 140 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          iz = iza(j) / 1000
          az = az + fme(j) * iz
@@ -4625,59 +2710,26 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          q = q + awc(j) * fme(j) * iz**(4.*third)
   140    zq = zq + awc(j) * fme(j) * iz**2
          nd = ns(int(sqrt(zq/aa)+.99))
-
-*-----------------------------------------------------------------------
-*     TEMPORARY expedient: allow estep to control all substeps.
-*-----------------------------------------------------------------------
         nsb(mkc) = max(nd,nsb(mkc))
-
-*-----------------------------------------------------------------------
-*     finish the knock-on cross sections.
-*-----------------------------------------------------------------------
-
       do 150 n = 1, nee
   150    pkn(n+nee*(mkc-1)) = az * pkn(n+nee*(mkc-1))
-
-*-----------------------------------------------------------------------
-*     calculate range, straggling, and scattering tables.
-*-----------------------------------------------------------------------
-
       call rangel(az,aa,.00001*q/aa,nd,iom,ierr)
          if( ierr .ne. 0 ) return
-
-
       call elscat(az,iom,ierr)
          if( ierr .ne. 0 ) return
-
-*-----------------------------------------------------------------------
-*     set up the k edge, the x-ray energy, and the auger probability
-*     of the component with the highest z.
-*-----------------------------------------------------------------------
-
          jm = jmd(1+mkc)
-
       do 160 j = jmd(1+mkc), jmd(1+mkc+1) - 1
   160    if( iza(j) .gt. iza(jm) ) jm = j
-
          iz = iza(jm) / 1000
          edg(mkc) = exs(jxs(1,lme(3,jm))) * .001
          eek(mkc) = exs(jxs(1,lme(3,jm))+1) * .001
          wwk(mkc) = 1. / (1.+1./(-.064+.034*iz-1.03e-6*iz**3)**4)
-
-*-----------------------------------------------------------------------
-*     calculate cross sections and bias factors for making x-rays.
-*     allow for negative values of xnum in the future.
-*-----------------------------------------------------------------------
-
          a = edg(mkc) / gpt(3)
          fm = 0.
-
       do 165 j = jmd(1+mkc), jmd(1+mkc+1) - 1
   165    if( iz .eq. iza(j)/1000 ) fm = fm + fme(j)
-
          cn = min(iz,2)*fm/(a*3.)
          d = 0.
-
       do 170 n = 1, nee
          s = eee(n) / gpt(3)
          r = eee(n) / edg(mkc)
@@ -4694,20 +2746,9 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          if( xnum .lt. 0. .and. d .ne. 0. )
      &      xnm(mkc) = max(one,-xnum/d)
          if( xnum .ge. 0. ) xnm(mkc) = xnum
-
-*-----------------------------------------------------------------------
-*     calculate bremsstrahlung cross sections.
-*-----------------------------------------------------------------------
-
          call elbrm(iom,ierr)
          if( ierr .ne. 0 ) return
-
          call elbang
-
-*-----------------------------------------------------------------------
-*     print table 86.
-*-----------------------------------------------------------------------
-
          if(ink(86) .eq. 0 ) goto 180
          af = avgdn / aa
       write(iuo,174) nmt(mkc)
@@ -4717,106 +2758,49 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
      3 19hcollision radiation,3x,5htotal,15x,5hbrems,16x,/10x,3hmev,
      4 6x,18hmev barn  mev barn,2x,8hmev barn,4x,4hbarn,17x,4hbarn,
      5 6x,4hbarn)
-
       do 176 n = nee-1, 1, -1
       nk = n + nee * (mkc-1)
       write(iuo,178)n,eee(n),xse85(1,nk)/af,
      1 xse85(2,nk)/af,xse85(3,nk)/af,pbr(nk),
      2 pbt(nk),pxr(nk),pkn(nk)
-
   176 continue
-
   178 format(i5,1pe12.4,2(1x,5e10.3))
   180 continue
       if( its30 .eq. 3 ) rka(1) = 1.
-
-*-----------------------------------------------------------------------
-*     print bnum and enum biasing parameters.
-*-----------------------------------------------------------------------
-
       if( numb .eq. 1 .and. enum .eq. 1. ) enum = .01
-
       if( bnum .ne. 1. ) write(iuo,190) bnum
   190    format(/48h the bremsstrahlung production cross section for,
      &   38h all materials is scaled by the factor,1pe12.4)
-
       if( numb .eq. 1 ) write(iuo,194)
   194    format(51h bremsstrahlung generated on each electron substep.)
-
       if( numb .eq. 1 .and. enum .eq. .01 ) write(iuo,196)
   196    format(46h secondary electron production reduced by 99%.)
-
       if( xnum .ne. 1. ) write(iuo,200) xnum
   200    format(/39h the x ray production cross section for,
      &   38h all materials is scaled by the factor,1pe12.4)
-
       if( rnok .ne. 1. ) write(iuo,210) rnok
   210    format(/51h the knock-on electron production cross section for,
      &   38h all materials is scaled by the factor,1pe12.4)
-
       if( enum .ne. 1. ) write(iuo,220) enum
   220   format(/52h the secondary electron production cross section for,
      &   38h all materials is scaled by the factor,1pe12.4)
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-
-************************************************************************
-*                                                                      *
       subroutine rangel(az,aa,qa,nd,iom,ierr)
-*                                                                      *
-*       calculate electron range tables and straggling tables.         *
-*       az = average atomic number   aa = average atomic weight        *
-*       qa = .00001 * mass average of z**(4/3)                         *
-*       nd = default number of electron substeps per energy step       *
-*                                                                      *
-*       Last modified by K.Niita on 2014/01/19                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       common /kmat1o/ iom1, iom2, iom3
-
-*-----------------------------------------------------------------------
-
       parameter (mlanc=1591)
       common /lancut/ avlm(mlanc),flam(mlanc),pim(10:100),pimph(9,4)
 !$OMP THREADPRIVATE(/lancut/)
-
-*-----------------------------------------------------------------------
-
       parameter (km=5)
       dimension bl(km),el(km),g(km),gb(km)
       character hr*12
-
       dimension el0(km),g0(km),gb0(km)
-
-*-----------------------------------------------------------------------
-
       iuo = iom1
-
-*-----------------------------------------------------------------------
-*     the formula for el(k) in the do 70 loop is based on equations
-*     (a9) and (a10) of m. j. berger, methods in computational
-*     physics, vol. 1, (academic press, new york, 1963) 135.
-*     c1 = 1.0e+24 * h**2 * c**2 * alpha**2 / (2 * pi * m * c**2),
-*     where alpha = 1/fscon is the fine structure constant.
-*     c2 = ln(2*i**2), where i is the mean ionization potential
-*     in units of the electron mass.
-*-----------------------------------------------------------------------
-
          c0 = 1.d12 * planck * slite / fscon
          c1 = c0 * c0 / (2*pie*gpt(3))
          cl = log(two)
@@ -4824,31 +2808,21 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          c4 = .125 + cl
          c5 = euler - 3. * cl
          dk = km - 1
-
-*-----------------------------------------------------------------------
-*     calculate the mean-ionization-potential term.
-*     obtain an average density for a cell with the same material but
-*     different densities.
-*-----------------------------------------------------------------------
-
          rh = 0.
          nh = 0
          ic = 0
-
       do 10 i = 1, mxa
          if( mat(i) .ne. mkc ) goto 10
          if( ic .eq. 0 ) ic = i
          rh = rh + rho(i)
          nh = nh + 1
    10 continue
-
       if(nh.eq.0.or.rh.eq.0.) then
          write(iom,'(/''Error : in rangel :zero density or '',
      &                ''non-existent material'')')
          ierr = 1
          return
       end if
-
          rh = rh / nh
    20    sr = 0.
          f = 1.
@@ -4857,64 +2831,37 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          if( jmd(1+mkc+1)-jmd(1+mkc) .eq. 1 ) goto 34
          if( dbcn(20) .ne. 0. ) goto 32
          iz = iza(jmd(1+mkc)) / 1000
-
       do 30 j = jmd(1+mkc) + 1, jmd(1+mkc+1) - 1
    30    if( iz .ne. iza(j) / 1000 ) goto 32
-
          goto 34
    32    f = 1.13
          jj = jj + 2
    34 do 36 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          iz = iza(j) / 1000
          p = f_ionp(iz,2,jj,iom,ierr)
-
             if( ierr .ne. 0 ) return
-
    36    sr = sr + log(p) * iz * fme(j)
          sr = exp(sr/az)
          si = sr * 1e-6
          c2 = log(2.*(si/gpt(3))**2)
-
-*-----------------------------------------------------------------------
-*    set up the electron scattering density correction.
-*    distinguish between condensed and gas state for density effect.
 !    TEMPORARY LIMITATION.  the density of the first cell with
 !                           the current material is used.
-*    az is zoa in the notation of sternhiemer, berger, seltzer.
-*    cr is the classical electron radius.
-*-----------------------------------------------------------------------
-
          cr = planck * slite / (2.d0*pie*fscon*gpt(3))
          pl = 2.d18 * cr * gpt(3) * fscon * sqrt(pie*cr*rh*az)
          su = 2.d0 * log(sr/pl)
          if( istern .ne. 0 ) goto 40
-
-*-----------------------------------------------------------------------
-*     sternheimer and peierls treatment.
-*-----------------------------------------------------------------------
-
          cb = 2. * log(sr/(37.1*sqrt(az*rho(ic)))) + 1.
          if( jemi(mkc) .eq. 0 ) goto 38
          xb = 4 + min(1,int(cb/12.25))
          xa = max(zero+.1*min(20,max(16,int(2.*cb)-3)),.326*cb-2.5)
          goto 50
-
    38    xb = 2 + min(1,int(.01*sr))
          xa = max(zero+.2,.326*cb-.5*xb)
          goto 50
-
-*-----------------------------------------------------------------------
-*     sternheimer, berger, and seltzer treatment (sbs):
-*     r. m. sternheimer, s. m. seltzer, and m. j. berger, "densitys
-*     effect for the ionization loss of charged particles in various
-*     substances", phys rev b, 26, 6067(1982).
-*-----------------------------------------------------------------------
-
    40    j1 = 0
          j2 = 0
          m8 = 0
          m9 = 0
-
       do 42 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          m8 = max(m8,nxs(3,lme(3,j)))
          ns = nxs(11,lme(3,j))
@@ -4922,198 +2869,104 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          if( jcond(mkc) .eq. 0 .and. zs .gt. 0. ) j1 = j1 + 1
          if( jcond(mkc) .gt. 0 .and. zs .lt. 0. ) j2 = j2 + 1
    42    m9 = m9 + ns
-
-*-----------------------------------------------------------------------
-*     check conductor or non-conductor assignment.  non-conductor
-*     if assigned by cond<0, or =0 and at least one non-conducting
-*     component.  conductor if assigned cond>0 and at least one
-*     conducting component, or cond=0 and no non-conducting
-*     components.
-*-----------------------------------------------------------------------
-
          if( jcond(mkc) .ne. 0 ) goto 44
          if( j1 .ne. 0 ) goto 46
          jcond(mkc) = 1
-
           write(iom1,'('' ## warning. hmaterial'',i5,
      &     '' has been set to a conductor.'')') nmt(mkc)
-
          goto 46
    44    if( j2 .ne. 0 ) goto 46
          if( jcond(mkc) .lt. 0 ) jcond(mkc) = 0
          if( jcond(mkc) .eq. 0 ) goto 46
-
          write(iom1,'('' ## warning. hmaterial'',i5,
      &    '' has been set to a non-conductor.'')') nmt(mkc)
-
          write(iom1,*) '## warning. no conduction electrons available.'
-
-*-----------------------------------------------------------------------
-*     add memory for temporary arrays.
-*-----------------------------------------------------------------------
-
    46    if( istern .eq. 1 ) istern = lmb + 2 * m8 + 3 * m9
-
          if( mdas .lt. istern + 5 ) then
             write(iom,'(/
      &          ''<<< Memory ERROR : at rangel >>>'')')
             ierr = 1
             return
          end if
-
          call ALLOCATE_ggmTAL(istern + 5)
-
-
          l4 = 0
          l5 = l4 + 3 * m9
-
          call eldn1(az,su,pl,tal(l4+1),
      &             tal(l4+m9+1),tal(l4+2*m9+1),nt,wt,tm)
-
-*-----------------------------------------------------------------------
-*     calculate ranges from radiation and ionization loss rates.
-*-----------------------------------------------------------------------
-
    50    af = avgdn / aa
          ye = 0.
          ye0 = 0.
          nc = 8. * log(emx(3)*1000.) / cl + 1.
          im = nxs(16,lme(3,jmd(1+mkc)))
-
       do 110 nz = 1, nc
          n = nc + 1 - nz
          if( n .le. nee ) e = eee(n)
          if( n .gt. nee ) e = eee(nee) * efac**(n-nee)
          de = e * (1.-efac)
-
       do 70 k = 1, km
          s = (e-(k-1)*de/dk) / gpt(3)
-
          as = ecf(3) / (e-(k-1)*de/dk)
-
-*-----------------------------------------------------------------------
-*     get the radiation loss by interpolation in cross-section table.
-*-----------------------------------------------------------------------
-
          bl(k) = 0.
-
       do 60 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          ix = lme(3,j)
          in = 1
-
          if( im .ne. 3 )
      &      bl(k) = bl(k) + qpol(log(s),exs(jxs(2,ix)),
      &              exs(jxs(2,ix)+nxs(3,ix)),nxs(3,ix))
      &            * fme(j)*gpt(3)*(s+1.)
-
          if( im .eq. 3 )
      &      bl(k) = bl(k) + spol(log(s),exs(jxs(2,ix)),
      &                  exs(jxs(2,ix)+nxs(3,ix)),
      &                  tal(l5+1),tal(l5+m8+1),
      &                  nxs(3,ix),in,id,m1,m2)
      &             * fme(j) * gpt(3) * (s+1.)
-
    60 continue
-
-*-----------------------------------------------------------------------
-*     get the ionization loss from electron scattering theory.
-*-----------------------------------------------------------------------
-
          bs = s * (s+2.) / (s+1.)**2
          d = 0.
          if( istern .eq. 0 ) goto 66
-
          call eldn2(s,tm,tal(l4+1),tal(l4+1+m9),tal(l4+1+2*m9),nt,wt,d)
-
          goto 68
-
    66    x = .4342945 * log(sqrt(s*(s+2.)))
          if( x .gt. xa )
      &      d = max(zero,4.606*x-cb+(cb-4.606*xa)
      &        * ((xb-min(x,xb))/(xb-xa))**3)
    68    if( k .eq. 1 ) dd = d
-
-*-----------------------------------------------------------------------
-
          el(k) = c1 * az * (log(s**2*(s+2.))-c2+c3-bs
      &                      +c4*(s/(s+1.))**2-d) / bs
-
-*-----------------------------------------------------------------------
-*     original value
-*-----------------------------------------------------------------------
-
          el0(k) = el(k)
          g0(k)  = 1. / (el(k)+bl(k))
-
-*-----------------------------------------------------------------------
-*     modified by the average outgoing energy of scattering
-*-----------------------------------------------------------------------
-
          eout = 0.d0
-
          if( as .lt. 0.5d0 .and. rnok .ne. 0. )
      &   eout = c1 * az / bs *
      &          ( 2.*c3-log(as*(1.-as))-1./(1.-as)
      &        + 1./8.*(s/(s+1.))**2*(1.-4.*as**2)
      &        - (2.*s+1.)/(s+1.)**2*log(2.*(1.-as)) )
-
          el(k) = max( 0.0d0, el(k) - eout )
-
-*-----------------------------------------------------------------------
-
          g(k) = 1. / (el(k)+bl(k))
          gb(k) = g(k) * bl(k)
-
          gb0(k) = g0(k) * bl(k)
-
    70 continue
-
          if( n .eq. nc ) rg = .5 * (e-de) * g(km)
          if( n .eq. nee-1 ) rng(nee*mkc) = rg
-
          if( n .eq. nc ) rg0 = .5 * (e-de) * g0(km)
          if( n .eq. nee-1 ) rng0(nee*mkc) = rg0
-
-*-----------------------------------------------------------------------
-*     average the range increment over the energy interval.
-*-----------------------------------------------------------------------
-
          dr = simint(de,g,km)
          rg = rg + dr
-
          dr0 = simint(de,g0,km)
          rg0 = rg0 + dr0
-
          fe = simint(de,gb,km)
          ye = ye + fe
-
          fe0 = simint(de,gb0,km)
          ye0 = ye0 + fe0
-
          if( n .ge. nee ) goto 85
-
          rng(n+nee*(mkc-1)) = rg
          rng0(n+nee*(mkc-1)) = rg0
-
          drs(n+nee*(mkc-1)) = dr / nsb(mkc)
-
-*-----------------------------------------------------------------------
-*     calculate energy loss and straggling coefficients.
-*-----------------------------------------------------------------------
-
          ef = (el(1)+el(km)) / (bl(1)+bl(km)+el(1)+el(km))
          qav(n+nee*(mkc-1)) = de * ef / dr
-
-*-----------------------------------------------------------------------
-*     original value without the modification
-*-----------------------------------------------------------------------
-
          dr0 = simint(de,g0,km)
          ef0 = (el0(1)+el0(km)) / (bl(1)+bl(km)+el0(1)+el0(km))
          qav0(n+nee*(mkc-1)) = de * ef0 / dr0
-
-*-----------------------------------------------------------------------
-
          if( istrg .ne. 0 ) goto 80
          s = (e-.5*de) / gpt(3)
          t2 = (s+1.)**2
@@ -5122,38 +2975,19 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
      &                           / (dr*asp(n+nee*(mkc-1))))
      &                           + c5 + c4 * s**2 / t2
          qcn(n+nee*(mkc-1)) = sqrt(qa*de*ef) / dr
-
-*-----------------------------------------------------------------------
-*     seltzer empirical modification to blunck-westphal prescription
-*     for the variance of the gaussian in blunck-leisegang extension
-*     of the landau straggling theory.
-*-----------------------------------------------------------------------
-
          r = dr * asp(n+nee*(mkc-1)) / si
          qcn(n+nee*(mkc-1)) = qcn(n+nee*(mkc-1))
      &          / ( 1. + 3. / sqrt(10.*r*(1.+.1*r)**3))
-
-*-----------------------------------------------------------------------
-*     set cutoff values for sampling the landau function.
-*-----------------------------------------------------------------------
-
          if( ear(n+nee*(mkc-1)) .ge. avlm(mlanc)) goto 75
          flc(n+nee*(mkc-1)) = qpol(ear(n+nee*(mkc-1)),
      &                                  avlm,flam,mlanc)
          goto 80
    75    flc(n+nee*(mkc-1)) = flam(mlanc)
-
-*-----------------------------------------------------------------------
-*     load print table 85 for xs plotting.
-*-----------------------------------------------------------------------
-
    80    nk = n + nee * (mkc-1)
          xse85(1,nk) = el(1) * af
          xse85(2,nk) = bl(1) * af
          xse85(3,nk) = (el(1)+bl(1)) * af
-
          if( jovr(1)+jovr(3)+jovr(5) .ne. 3 ) goto 85
-
          xse85(4,nk) = rg / af
          xse85(5,nk) = ye / e
          bs = e * (e+2.*gpt(3)) / (e+gpt(3))**2
@@ -5162,15 +2996,9 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          xse85(8,nk) = bl(1) / el(1)
          xse85(9,nk) = dr / af
          xse85(10,nk) = fe
-
-*-----------------------------------------------------------------------
-*     print range table if required.
-*-----------------------------------------------------------------------
-
    85    if( ink(85) .eq. 0 ) goto 110
          if( jemi(mkc) .eq. 0 ) hr = ' (condensed)'
          if( jemi(mkc) .ne. 0 ) hr = ' (gas)      '
-
          if( nz .eq. 1 )
      &      write(iuo,90) nmt(mkc), hr, nsb(mkc), nd, sr
    90       format(25h1range table for material,i5,a12,62x,
@@ -5178,14 +3006,10 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
      &             36h electron substeps per energy step =,
      &             i4,1h,,2x,9hdefault =,i4,1h.,2x,
      &             24hmean ionization energy =,1pe12.5,4h ev./)
-
          if( istern .eq. 0 .or. nz .ne. 1 ) goto 94
-
          write(iuo,'(20h density effect data)')
-
          if( jcond(mkc) .eq. 0 ) write(iuo,'(14h non-conductor)')
          if( jcond(mkc) .gt. 0 ) write(iuo,'(10h conductor)')
-
       do 92 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          iz = iza(j) / 1000
          ns = nxs(11,lme(3,j))
@@ -5194,10 +3018,8 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
    92    write(iuo,'(6(6x,f3.0,f11.3))')
      &        (exs(jxs(11,lme(3,j))+nn-1),
      &         exs(jxs(11,lme(3,j))+ns+nn-1),nn=1,ns)
-
          write(iuo,'(7x,8hplas(ev),7x,2hwt,7x,9htmin(mev))')
          write(iuo,'(3x,3f12.5/)') pl, wt, tm * gpt(3)
-
    94    if(nz.eq.1) write(iuo,96)
    96    format(9x,6henergy,11x,14hstopping power,11x,5hrange,3x,
      &          9hradiation,3x,7hbeta**2,3x,7hdensity,3x,7hrad/col,
@@ -5206,60 +3028,23 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
      &          5hyield,16x,4hcorr/10x,3hmev,6x,
      &          29hmev cm2/g mev cm2/g mev cm2/g,
      &          3x,5hg/cm2,24x,9hmev cm2/g,13x,5hg/cm2/)
-
          bs = e * (e+2.*gpt(3)) / (e+gpt(3))**2
-
          write(iuo,100)
      &   n, e, el(1)*af, bl(1)*af, (el(1)+bl(1))*af, rg/af, ye/e,
      &   bs, c1*af*az*dd/bs, bl(1)/el(1), dr/af, fe
-
   100    format(i5,1pe12.4,2(1x,5e10.3))
-
   110 continue
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-
-************************************************************************
-*                                                                      *
       subroutine eldn1(az,su,pl,fo,eq,xq,nt,wt,tm)
-*                                                                      *
-*       calculate oscillator parameters, fo, eq, xq, and the number    *
-*       of oscillators, nt, based on shell data of carlson and the     *
-*       plasma frequency, pl, and log of the ionization potential, su. *
-*       return the fitting parameter, wt, and minimum                  *
-*       normalized kinetic energy, tm, for use in eldn2.               *
-*       this is eq. 10 of r. m. sternheimer, s. m. seltzer, and m. j.  *
-*       berger, "density effect for the ionization loss of charged     *
-*       particles in various substances", phys rev b, 26, 6067(1982).  *
-*                                                                      *
-*       Last modified by K.Niita on 2009/10/06                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       common /kmat1o/ iom1, iom2, iom3
-
-*-----------------------------------------------------------------------
-
       dimension fo(*),eq(*),xq(*)
-
-*-----------------------------------------------------------------------
-
          nt = 0
-
       do 20 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          iz = iza(j) / 1000
          ns = nxs(11,lme(3,j))
@@ -5271,106 +3056,50 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          xq(nt) = (exs(jxs(11,lme(3,j))+ns+n-1)/pl)**2
          eq(nt) = 2. * third * fo(nt)
          goto 20
-
    10    xq(nt) = 0.
          eq(nt) = fo(nt)
    20 continue
-
-*-----------------------------------------------------------------------
-*     find fitting parameter rho, termed wt here, following
-*     sternheimer, berger and seltzer as implemented in its3.0.
-*-----------------------------------------------------------------------
-
          mt = 0
          wt = 2.
    30    xo = wt
          fu = 0.
          dr = 0.
-
       do 40 n = 1, nt
          pa = wt * wt * xq(n) + eq(n)
          fu = fu + fo(n) * log(pa)
    40    dr = dr + fo(n) * 2. * wt * xq(n) / pa
          wt = wt - (fu-su) / dr
          mt = mt + 1
-
-*-----------------------------------------------------------------------
-*     set unconverged fitting parameter to arbitrarily small value.
-*-----------------------------------------------------------------------
-
          if( mt .lt. 25 ) goto 50
-
          write(iom1,*)
      &   '## warning. electron oscillator fitting convergence problem.'
-
          wt = 1.e-4
          goto 70
-
    50    if( wt .gt. 0. ) goto 60
          wt = .5 * xo
          goto 30
-
    60    if( abs(wt-xo) .gt. 1.e-6 * xo ) goto 30
-
-*-----------------------------------------------------------------------
-*     fitting parameter, wt, accepted.
-*-----------------------------------------------------------------------
-
    70    w2 = wt**2
-
       do 80 l = 1, nt
          xq(l) = w2 * xq(l)
    80    eq(l) = xq(l) + eq(l)
-
-*-----------------------------------------------------------------------
-*     find minimum normalized kinetic energy.
-*-----------------------------------------------------------------------
-
          tm = 0.
          if( jcond(mkc) .gt. 0 ) return
          sm = 0.
-
       do 90 l = 1, nt
    90    sm = sm + fo(l) / xq(l)
          bq = one / (one+sm)
          tm = one / sqrt(one-bq) - one
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-************************************************************************
-*                                                                      *
       subroutine eldn2(s,tm,fo,eq,xq,nt,wt,d)
-*                                                                      *
-*       calculate the density effect, d, based on fitting parameter,wt *
-*       and oscillator parameters fo, eq, xq, at normalized energy, s  *
-*       greater than tm.  d=zero otherwise.                            *
-*       this routine solves eqs. (5) and (6) of sternheimer (1982).    *
-*                                                                      *
-*       Last modified by K.Niita on 2009/10/06                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       common /kmat1o/ iom1, iom2, iom3
-
-*-----------------------------------------------------------------------
-
       dimension fo(*),eq(*),xq(*)
-
-*-----------------------------------------------------------------------
-
          d = 0.
          if( s .le. tm ) return
          mt = 0
@@ -5379,80 +3108,39 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
    10    xo = x
          fn = 0.
          dv = 0.
-
       do 20 n = 1, nt
          fn = fn + fo(n) / (xq(n)+x)
    20    dv = dv - fo(n) / ((xq(n)+x)**2)
          x = x - (fn-re) / dv
          mt = mt + 1
-
-*-----------------------------------------------------------------------
-*     set unconverged fitting parameter, d, to zero.
-*-----------------------------------------------------------------------
-
          if( mt .lt. 25 ) goto 30
-
        write(iom1,*)
      & '## warning. unconverged density effect correction set to zero.'
-
          d = 0.
          return
-
    30    if( x .ge. 0. ) goto 40
          x = .5 * xo
          goto 10
-
    40    if( abs(x-xo) .gt. 1.e-6 * xo ) goto 10
-
-*-----------------------------------------------------------------------
-*     fitting parameter, x, accepted. get density effect, d.
-*-----------------------------------------------------------------------
-
    50    d = -x / (s+1.)**2
       do 60 l = 1, nt
    60    d = d + fo(l) * log(one+x/eq(l))
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-************************************************************************
-*                                                                      *
       subroutine elscat(az,iom,ierr)
-*                                                                      *
-*       calculate electron scattering angle distributions.             *
-*       az = average atomic number                                     *
-*                                                                      *
-*       Last modified by K.Niita on 2009/10/06                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       dimension p(240),h(240)
-
-*-----------------------------------------------------------------------
-*     prepare zz/z(z+1) correction factor.
-*-----------------------------------------------------------------------
-
          cr = 0.
          cd = 0.
-
       do 10 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          z = iza(j) / 1000
          cr = cr + z**2 * fme(j)
    10    cd = cd + (z+1.) * z * fme(j)
          cr = cr / cd
-
       do 110 n = 1, nee - 1
          cm = sqrt(1.-4./((eee(n)+eee(n+1))/gpt(3)+8.))
          f = 0.
@@ -5462,31 +3150,19 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          r1 = rng(n+nee*(mkc-1)) + rng(n+1+nee*(mkc-1))
          r2 = drs(n+nee*(mkc-1))
          lx = 0
-
       do 20 i = 1, 240
    20    p(i) = 0.
-
          call elsng(1,.5*(e1+e2),.5*(r1+r2),p,lx,iom,ierr)
          call elsng(2,.5*(e1-e2),.5*(r1-r2),p,lx,iom,ierr)
-
          if( ierr .ne. 0 ) return
-
          ta = p(1) * (r1-r2) / (p(2)*(r1+r2))
          xf = 2. * r2 * p(1) / (p(2)*(r1+r2)-p(1)*(r1-r2))
          hm = ta**(xf*p(lx))
          h(1) = .5 * (1.-hm)
-
       do 30 lm = 2, lx
          h(lm) = (ta**(xf*p(lm))-hm) * (lm-.5)
    30    if( h(lm) .lt. 1e-6*(lm-.5) ) goto 40
-
    40 continue
-
-*-----------------------------------------------------------------------
-*     calculate the cumulative scattering distribution as the sum of
-*     the goudsmit-saunderson legendre series.
-*-----------------------------------------------------------------------
-
       do 80 m = 2, maxi
          b = 1. - calph(m)
          c = .5 * (1.-calph(m)**2)
@@ -5497,11 +3173,6 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
          c = ((2*l-3)*calph(m)*b-(l-3)*a) / l
    80    egg(m,n+nee*(mkc-1)) = egg(m,n+nee*(mkc-1))+h(l)*c
          gm = egg(maxi,n+nee*(mkc-1))
-
-*-----------------------------------------------------------------------
-*     apply zz/z(z+1) correction.
-*-----------------------------------------------------------------------
-
       do 90 m = 2, maxi
          d = egg(m,n+nee*(mkc-1)) - egg(m-1,n+nee*(mkc-1))
          egg(m-1,n+nee*(mkc-1)) = f
@@ -5509,46 +3180,19 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
      &    v = 1. - (1.-cr) * (cm-calph(m)) / (calph(m-1)-calph(m))
          if( cm .ge. calph(m-1) ) v = cr
    90    f = f + d * v
-
          egg(maxi,n+nee*(mkc-1)) = f
-
       do 100 m = 2, maxi
   100    egg(m,n+nee*(mkc-1)) = gm * egg(m,n+nee*(mkc-1)) / f
-
   110 continue
-
-*-----------------------------------------------------------------------
       return
       end
-
-
-************************************************************************
-*                                                                      *
       subroutine elsng(il,e,ra,p,lx,iom,ierr)
-*                                                                      *
-*       calculate components p of the single-scattering cross section. *
-*       il=1 for beginning of centered electron substep.               *
-*       il=2 for end of substep.  calculate only the first component.  *
-*       e = energy of the electron.                                    *
-*       ra = range of the electron.                                    *
-*       lx = number of components calculated for il=1.                 *
-*                                                                      *
-*       Last modified by K.Niita on 2009/09/17                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       dimension p(240),ta(3,280),am(5,6),ap(5,6),ca(280)
-
       data (ca(i),i=  1, 86)/      .08999,.09031,.09064,.09097,.09131,
      1 .09164,.09198,.09232,.09267,.09301,.09336,.09371,.09407,.09442,
      2 .09479,.09515,.09551,.09588,.09625,.09663,.09700,.09738,.09777,
@@ -5582,33 +3226,18 @@ cfrtati 2022/03/22 warning moved to datamaxsummary
       data (ca(i),i=259,280)/      .85656,.86801,.87921,.89013,.90073,
      1 .91098,.92085,.93029,.93927,.94775,.95570,.96308,.96987,.97603,
      2 .98154,.98636,.99049,.99389,.99655,.99847,.99962,1./
-
-*-----------------------------------------------------------------------
-
          s = e / gpt(3)
          t4 = s * (s+2.)
          bs = t4 / (s+1.)**2
-
       do 210 ic = jmd(1+mkc), jmd(1+mkc+1) - 1
-
-*-----------------------------------------------------------------------
-
          ix = lme(3,ic)
          z = iza(ic) / 1000
          u = z / (fscon*sqrt(bs))
-
       if( dbcn(20) .ne. 6.0949 ) then
-c        the constant 3.1329 is 4. * 0.885**2
          ea = (1.13+3.76*sqrt(s/(s+1.))*u**2)
      &      * z**(2.*third) / (3.1329*t4*fscon**2)
       end if
-
       if( e .gt. .256 ) goto 20
-
-*-----------------------------------------------------------------------
-*     energy < .256 mev
-*-----------------------------------------------------------------------
-
          kx = 2
          if( il .eq. 1 )
      &      kx = min(max(51,int(exp(1.794-.397*log(ea)))),240)
@@ -5619,7 +3248,6 @@ c        the constant 3.1329 is 4. * 0.885**2
          x3 = log(exs(jxs(4,ix)+14*(j+1)))
          dd = (x1**2)*(x2-x3)-(x2**2)*(x1-x3)+(x3**2)*(x1-x2)
          cl = 28076630.*(z+1.)*ra*fme(ic)/z
-
       do 10 l = 2, kx
          c1 = exs(jxs(7,ix)+l-2+240*(j-1))
          c2 = exs(jxs(7,ix)+l-2+240*j)
@@ -5629,13 +3257,7 @@ c        the constant 3.1329 is 4. * 0.885**2
          cd = (x1**2)*(x2*c3-x3*c2)-(x2**2)*(x1*c3-x3*c1)
      &      + (x3**2)*(x1*c2-x2*c1)
    10    p(l+1-il) = p(l+1-il) + cl * exp((ad*ae**2+bd*ae+cd)/dd)
-
       goto 210
-
-*-----------------------------------------------------------------------
-*     energy > .256 mev
-*-----------------------------------------------------------------------
-
    20    e1 = 1. + 1. / ea
          e3 = 1. + 2. * ea
          e4 = 1. / (1.+ea)
@@ -5645,31 +3267,24 @@ c        the constant 3.1329 is 4. * 0.885**2
          wq = .499 * z * (z+1) * ra * fme(ic) / (t4*bs)
          cf = 0.
          if( u .gt. 2.79 ) goto 30
-
          i = min(max(2,280-nint(100.*u)),279)
          t = 100. * u + i - 280
          cf = (.5*t*((t+1.)*ca(i-1)+(t-1.)*ca(i+1))+(1.-t**2)*ca(i))
      &      * pie * u * bs
-
    30 do 50 j = 1, 5
          y= 1. - cos((j-1)*.25*pie) + 2. * ea
          am(j,6) = qpol(e,exs(jxs(3,ix)),exs(jxs(3,ix)
      &           + nxs(4,ix)*j),nxs(4,ix))-1.-cf*sqrt(.5*y)
          am(j,1) = 1.
-
       do 40 jk = 2, 5
    40    am(j,jk) = am(j,jk-1) * y
-
       do 50 m = 1, 6
    50    ap(j,m) = am(j,m)
-
       do 90 j = 1, 4
          mx = j
-
       do 60 n = j + 1, 5
    60    if( abs(ap(n,j)) .gt. abs(ap(mx,j)) ) mx = n
          if( mx .eq. j ) goto 80
-
       do 70 m = 1, 6
          t = ap(mx,m)
          ap(mx,m) = ap(j,m)
@@ -5680,64 +3295,49 @@ c        the constant 3.1329 is 4. * 0.885**2
             ierr = 1
             return
          end if
-
-
       do 90 n = j + 1, 5
          t = -ap(n,j) / ap(j,j)
       do 90 m = j + 1, 6
    90    ap(n,m) = ap(n,m) + t * ap(j,m)
-
       do 110 n = 0, 4
          t = 0.
       do 100 m = 1, n
   100    t = t + ap(5-n,6-m) * am(6-m,6)
   110    am(5-n,6) = (ap(5-n,6)-t) / ap(5-n,5-n)
-
          if( il .eq. 1 ) goto 120
-
          p(1) = p(1) + wq
      &        * ((1.+am(1,6))*e7+cf*af+am(2,6)*(2.*e4+e7-e3*e7)+2.
      &        * (am(3,6)+am(4,6)*(e3+third)+am(5,6)
      &        * (e3**2+2.*third*e3+third)))
-
          goto 210
-
   120    kx = min(max(10,int(exp(1.794-.397*log(ea)))),240)
          la = kx + 40
          ta(1,1) = 0.
          if( ea .gt. .0001 ) goto 140
          ta(1,2) = e7
-
       do 130 l = 3, kx + 1
   130    ta(1,l) = ((2*l-3)*e3*ta(1,l-1)-(l-1)*ta(1,l-2)-(2*l-3)*e4)
      &           / (l-2)
          goto 170
-
   140    ta(1,la) = 0.
          ta(1,la-1) = 1e-25
-
       do 150 ll = 1, la-3
          l = la - 1 - ll
   150    ta(1,l) = ((2*l+1)*ta(1,l+1)*e3-l*ta(1,l+2))/(l+1)
          tf = (e7-e4/(2.*ea))/ta(1,2)
-
       do 160 l = 3, kx+1
   160    ta(1,l) = ta(1,l)*tf+e4/(2.*ea)
-
          ta(1,2) = e7
   170    ta(2,2) = af
          sm = 1.
          ar = 1.
-
       do 180 l = 3, kx
          ar = ar * ae
          sm = sm + ar
   180    ta(2,l) = af * sm
-
       do 190 l = 2, kx
   190    ta(3,l) = e3 * ta(1,l) + ta(1,2)
      &           - (l*ta(1,l+1)+(l-1)*ta(1,l-1)) / (2*l-1)
-
          p(2) = p(2) + wq * ((1.+am(1,6))*ta(1,2)
      &                      + cf*ta(2,2)+am(2,6)*ta(3,2)+2.
      &                      * (am(3,6)+am(4,6)*(e3+third)
@@ -5746,61 +3346,25 @@ c        the constant 3.1329 is 4. * 0.885**2
      &                      + cf*ta(2,3)+am(2,6)*ta(3,3)+2.
      &                      * (am(3,6)+am(4,6)*e3+am(5,6)
      &                      * (e3**2+.6*third)))
-
       do 200 l = 4, kx
   200    p(l) = p(l) + wq * ((1.+am(1,6))*ta(1,l)
      &                      + cf*ta(2,l)+am(2,6)*ta(3,l)+2.
      &                      * (am(3,6)+am(4,6)*e3+am(5,6)
      &                      * (e3**2+third)))
-
-*-----------------------------------------------------------------------
-
   210    if( il .eq. 1 ) lx = max(lx,kx)
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-
-************************************************************************
-*                                                                      *
       subroutine elbrm(iom,ierr)
-*                                                                      *
-*       calculate bremsstrahlung probabilities and spectra.            *
-*                                                                      *
-*       Last modified by K.Niita on 2009/09/28                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       parameter (pf=2.*pie/fscon)
       dimension ek(11),g(11),sw(13),tq(13),sv(2),dv(2)
       data tq/50.,40.,30.,20.,15.,12.5,10.,8.,6.,5.,4.,3.,2./
       data sw/1.,.98,.94,.855,.77,.71,.625,.52,.383,.298,.205,.103,0./
-
-*-----------------------------------------------------------------------
-*     compute the unbiased cumulative probability, eba, for energy
-*     loss fractions (photon/electron) in single bremsstrahlung
-*     events, and the bremsstrahlung cross section, pbr.
-*     set up dynamic memory scratch arrays in t_array.
-*-----------------------------------------------------------------------
-
-*-----------------------------------------------------------------------
-*     integrated tiger series (its) method before its3.0.
-*-----------------------------------------------------------------------
-
          if( nxs(16,lme(3,jmd(1+mkc))) .eq. 3 ) goto 120
-
       do 110 n = 1, nee
          e = eee(n)
          wt = 1.
@@ -5811,12 +3375,10 @@ c        the constant 3.1329 is 4. * 0.885**2
          eo = s + 1.
          po = sqrt(s*(s+2.))
          es = log(eo+po)
-
       do 100 k = 2, ntop
          do 10 i = 1, 11
             ek(i) = rkt(k)-(i-1)*(rkt(k)-rkt(k-1))*.1
    10       g(i) = 0.
-
       do 80 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          ix = lme(3,j)
          z = nxs(2,ix)
@@ -5826,63 +3388,40 @@ c        the constant 3.1329 is 4. * 0.885**2
          if( e .ge. 1. ) goto 40
          dv(1) = 2. * exs(jxs(1,ix)+2) - 1.
          dv(2) = exs(jxs(1,ix)+2)
-
       do 30 i = 1, 11
          if( ek(i) .le. dv(2) ) goto 60
          if( i .ge. 2 ) goto 30
-
       do 20 l = 1, 2
    20    sv(l) = cr
      &         * xsecmc(s,dv(l)*s,wt,eo,po,es,z,ze,exs(jxs(8,ix)))
    30    g(i) = g(i) + ((sv(1)-sv(2))*ek(i)+sv(2)*dv(1)-sv(1)*dv(2))
      &        / (dv(1)-dv(2))
          goto 80
-
    40    d = exs(jxs(1,ix)+3)
-
       do 50 i = 1, 11
          if( ek(i) .le. d ) goto 60
          if( i .ge. 2 ) goto 50
-
          s1 = cr
      &      * xsecmc(s,d*s,wt,eo,po,es,z,ze,exs(jxs(8,ix)))
          a = exp(qpol(tl,exs(jxs(6,ix)),exs(jxs(6,ix)
      &     + nxs(6,ix)),nxs(6,ix)))*fme(j)
-
    50    g(i) = g(i) + ((s1-a)*ek(i)+a*d-s1)/(d-1.)
          goto 80
-
    60 do 70 i = i, 11
-
    70    g(i) = g(i) + cr
      &        * xsecmc(s,ek(i)*s,wt,eo,po,es,z,ze,exs(jxs(8,ix)))
    80 continue
-
       do 90 i = 1, 11
    90    g(i) = g(i) / ek(i)
-
   100    eba(k,n+nee*(mkc-1)) =
      &   (g(1)+4.*(g(2)+g(4)+g(6)+g(8)+g(10))
      &    + 2.*(g(3)+g(5)+g(7)+g(9))+g(11))*(rkt(k)-rkt(k-1))
      &    + eba(k-1,n+nee*(mkc-1))
-
          pbr(n+nee*(mkc-1)) = eba(ntop,n+nee*(mkc-1)) / 30.
-
-*-----------------------------------------------------------------------
-*     normalize the cumulative unbiased probability, eba.
-*-----------------------------------------------------------------------
-
       do 110 k = 2, ntop
   110    eba(k,n+nee*(mkc-1)) = eba(k,n+nee*(mkc-1))
      &                             / eba(ntop,n+nee*(mkc-1))
          goto 210
-
-*-----------------------------------------------------------------------
-*    integrated tiger series (its) method after its3.0.
-*        set up dynamic memory scratch arrays in tal.
-*        use the values for the first zaid since they are equal.
-*-----------------------------------------------------------------------
-
   120    ix = lme(3,jmd(1+mkc))
          nm = nxs(5,ix)
          km = nxs(6,ix)
@@ -5893,29 +3432,15 @@ c        the constant 3.1329 is 4. * 0.885**2
          l5 = l0+km+nm+(nm+nee)*km
          m8 = max(nm,km)
          m9 = km+nm+(nm+nee)*km+2*m8
-
          if(mdas.lt.(l0+m9)+5) then
             write(iom,'(/
      &          ''<<< Memory ERROR : at brem >>>'')')
             ierr = 1
             return
          end if
-
          call ALLOCATE_ggmTAL((l0+m9)+5)
-
       do 130 n = 1, m9
   130    tal(l0+n) = 0.
-
-*-----------------------------------------------------------------------
-*     bremsstrahlung production cross sections based upon the
-*     evaluation described in:
-*     "cross sections for bremsstrahlung production and electron-
-*     impact ionization," s. m. selzter, in monte carlo transport
-*     of electrons and photons, t. m. jenkins, w. r. nelson, and
-*     a. rindi, eds.  algorithm implementation based upon its3.0
-*     and fit values from its3.0 database.
-*-----------------------------------------------------------------------
-
       do 140 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          ix = lme(3,j)
          z = nxs(2,ix)
@@ -5926,12 +3451,10 @@ c        the constant 3.1329 is 4. * 0.885**2
      &                      + z*z*exs(jxs(5,ix)+km+n-1+k*nm)
      &                      * fme(j)
          oe = one + 1.d-6
-
       do 150 k = 1, km
          tal(l0+k) = log(oe-exs(jxs(5,ix)+nm+k-1))
       do 150 n = 1, nm
   150    tal(l2+n+(k-1)*nm) = log(tal(l2+n+(k-1)*nm))
-
       do 160 k = 1, km
          in = 1
       do 160 n = 1, nee
@@ -5942,7 +3465,6 @@ c        the constant 3.1329 is 4. * 0.885**2
       do 200 n = 1, nee
          eba(1,n+nee*(mkc-1)) = 0.
          in = 1
-
       do 190 k = 2, ntop
          de = rkt(k) - rkt(k-1)
       do 170 np = 1, 11
@@ -5950,138 +3472,70 @@ c        the constant 3.1329 is 4. * 0.885**2
          xp = log(oe-ek(np))
   170    g(np) = exp(spol(xp,tal(l0+1),tal(l3+1+(n-1)*km),
      &               tal(l5+1),tal(l5+m8+1),km,in,id,m1,m2))
-
       do 180 i = 1, 11
   180    g(i) = g(i) / ek(i)
-
   190    eba(k,n+nee*(mkc-1)) =
      &        (g(1)+4.d0*(g(2)+g(4)+g(6)+g(8)+g(10))
      &        + 2.d0*(g(3)+g(5)+g(7)+g(9))+g(11))*de
      &        + eba(k-1,n+nee*(mkc-1))
-
-*-----------------------------------------------------------------------
-*     30=3*(number of integration points -1)
-*-----------------------------------------------------------------------
-
          pbr(n+nee*(mkc-1)) = eba(ntop,n+nee*(mkc-1)) / 30.d0
-
-*-----------------------------------------------------------------------
-*     normalize the cumulative unbiased probability, eba.
-*-----------------------------------------------------------------------
-
       do 200 k = 2, ntop
   200    eba(k,n+nee*(mkc-1)) = eba(k,n+nee*(mkc-1))
      &                             / eba(ntop,n+nee*(mkc-1))
-
-*-----------------------------------------------------------------------
-*     integrate bremsstrahlung probabilities and spectra for the
-*     thick-target bremsstrahlung approximation.
-*-----------------------------------------------------------------------
-
   210 do 230 nz = 1, nee - 1
          n = nee - nz
          pbt(n+nee*(mkc-1)) = pbt(n+1+nee*(mkc-1))
      &     + .5 * (pbr(n+nee*(mkc-1))
      &     + pbr(n+1+nee*(mkc-1)))
      &     * (rng0(n+nee*(mkc-1)) - rng0(n+1+nee*(mkc-1)))
-
       do 220 k = 2, ntop
          e = rkt(k) * eee(n)
       do 220 j = n, nee - 1
          q = 1.
          if( e .lt. eee(j) )
      &   q = qpol(e/eee(j),rkt,eba(1,j+nee*(mkc-1)),ntop)
-
   220    ebt(k,n+nee*(mkc-1)) = ebt(k,n+nee*(mkc-1))
      &      + q * .5 * (pbr(j+nee*(mkc-1))
      &      + pbr(j+1+nee*(mkc-1)))
      &      * (rng0(j+nee*(mkc-1)) - rng0(j+1+nee*(mkc-1)))
-*-----------------------------------------------------------------------
-*     normalize the ttb cumulative unbiased probability, ebt.
-*-----------------------------------------------------------------------
-
       do 230 k = 2, ntop
   230    ebt(k,n+nee*(mkc-1)) = ebt(k,n+nee*(mkc-1))
      &      / ebt(ntop,n+nee*(mkc-1))
-
       do 240 k = 1, ntop
   240    ebt(k,nee*mkc) = ebt(k,nee*mkc-1)
-*
-*-----------------------------------------------------------------------
-*     set up the bbrem card bremsstrahlung energy biasing scheme.
-*-----------------------------------------------------------------------
-
          if( mbi(mkc) .eq. 0 ) return
-
       do 280 m = 1, nee
-
-*-----------------------------------------------------------------------
-*     first, bias and normalize the cumulative probability, ebd.
-*-----------------------------------------------------------------------
-
          f = 0.
-
       do 250 k = 2, ntop
          d = eba(k,m+nee*(mkc-1)) - eba(k-1,m+nee*(mkc-1))
          ebd(k-1,m+nee*(mkc-1)) = f
-
   250    f = f + d / bbrem(k)
          fst(m+nee*(mkc-1)) = f
-
       do 260 k = 1, ntop - 1
   260    ebd(k,m+nee*(mkc-1)) = ebd(k,m+nee*(mkc-1)) / f
-
-*-----------------------------------------------------------------------
-*     then, bias and normalize the ttb cumulative probability, ebt.
-*-----------------------------------------------------------------------
-
          f = 0.
       do 270 k = 2, ntop
          d = ebt(k,m+nee*(mkc-1)) - ebt(k-1,m+nee*(mkc-1))
          ebt(k-1,m+nee*(mkc-1)) = f
   270    f = f + d / bbrem(k)
          ftt(m+nee*(mkc-1)) = f
-
       do 280 k = 1, ntop - 1
   280    ebt(k,m+nee*(mkc-1)) = ebt(k,m+nee*(mkc-1)) / f
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-
-************************************************************************
-*                                                                      *
       function xsecmc(s,dk,wt,eo,po,es,z,ze,zf)
-*                                                                      *
-*       we have changed the name, xsec -> xsecmc                       *
-*       by K. Niita on 2002/03/22                                      *
-*       Last modified by K.Niita on 2009/09/28                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       parameter (pf=2.*pie/fscon)
       dimension zf(3)
-
-*-----------------------------------------------------------------------
-
          e = eo - dk
          p = sqrt((s-dk+2.)*(s-dk))
          ey = log(e+p)
          ee = eo * e
          pp = po * p
-
          f1 = 2. * third * pp**3 - ee * (p**2+po**2) * pp
      &      + es * e * p**3 + ey * (eo*po**3-2.*es*pp**2)
          f2 = 8. * third * ee * pp**3 + dk**2 * (ee+ee**2+pp**2) * pp
@@ -6097,50 +3551,26 @@ c        the constant 3.1329 is 4. * 0.885**2
      &                      + log(2.*ee/dk)-.5)
      &                      * (h1-h2))) * ze * e
      &                      / ((1.-exp(-pf*z*e/p))*p*eo)
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-************************************************************************
-*                                                                      *
       subroutine elbang
-*                                                                      *
-*       calculate bremsstrahlung angular distributions.                *
-*       Last modified by K.Niita on 2009/10/06                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-
       dimension ac((mpng+1)/2),cm((mpng+1)/2),ek(mwng),y(mpng),
      &          xi(mpng),ch(mpng)
-
-*-----------------------------------------------------------------------
-
          ca = 0.
          n1 = (mpng+1) / 2
          r2 = n1 - 1
-
       do 10 i = 1, n1
    10    cm(i) = (i-1) / r2
-
       do 15 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          z = iza(j) / 1000
    15    ca = ca + (z+1.) * z * fme(j)
-
       do 150 n = 1, nee, nstp
          s = eee(n) / gpt(3)
-
       do 20 k = 1, nwng
    20    ek(k) = rka(k) * s
          eo = s + 1.
@@ -6150,11 +3580,9 @@ c        the constant 3.1329 is 4. * 0.885**2
          b = po / eo
          d = eo - po
          s2 = 4. * (2.*eb+1.) / (p2*d**3)
-
       do 30 l = 1, mpng
          xi(l) = (1.+b*(n1-l)/r2)/(1.+b)
    30    ch(l) = (n1-l+r2*b)/(r2+b*(n1-l))
-
       do 150 k = 1, nwng
          e = eo - ek(k)
          ee = eo * e
@@ -6175,7 +3603,6 @@ c        the constant 3.1329 is 4. * 0.885**2
          f6 = 2.*eo*(3.*ek(k)-p2*e)/(p2*d**3)
          f7 = (2.*eb*f2+1.-(6.*eb-3.*ee+f2))/(d*p2)
          f8 = ek(k)*(eb+ee-1.)/p2
-
       do 40 l = 1, mpng
          q2 = p2 + e2 - 2. * po * ek(k) * ch(l)
          q = sqrt(q2)
@@ -6183,14 +3610,10 @@ c        the constant 3.1329 is 4. * 0.885**2
      &        + f5 + el*(f6*xi(l)**3*(1.-ch(l)**2)+f7*xi(l)+f8)
      &        + (log((q+p)/(q-p))/(p*q))*(2.*xi(l)/d
      &        - 3.*ek(k)-ek(k)*(p2-e2)/q2))/xi(l)
-
          goto 130
-
    50 do 60 l = 1, mpng
    60    y(l) = 0.
-
          if( s .gt. 30. ) goto 110
-
       do 100 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          z = iza(j)/1000
          if(eb.gt.ek(k)*(eo+20./(3.*z**third))) goto 80
@@ -6209,7 +3632,6 @@ c        the constant 3.1329 is 4. * 0.885**2
          f6 = 2.*eo*(3.*ek(k)-p2*e)/(p2*d**3)
          f7 = (2.*eb*f2+1.-(6.*eb-3.*ee+f2))/(d*p2)
          f8 = ek(k)*(eb+ee-1.)/p2
-
       do 70 l = 1, mpng
          q2 = p2+e2-2.*po*ek(k)*ch(l)
          q = sqrt(q2)
@@ -6217,95 +3639,57 @@ c        the constant 3.1329 is 4. * 0.885**2
      &        + f5 + el*(f6*xi(l)**3*(1.-ch(l)**2)+f7*xi(l)+f8)
      &        + (log((q+p)/(q-p))/(p*q))*(2.*xi(l)/d
      &        - 3.*ek(k)-ek(k)*(p2-e2)/q2))/xi(l)
-
          goto 100
-
    80    f = 4.*(z+1.)*z*fme(j)*b/eo
          g = log(ek(k)/(2.*ee))+2.
          a = 12.*z**third*ee/(121.*ek(k))
-
       do 90 l = 1, mpng
          sf = screen(a*xi(l))-g
    90    y(l) = y(l)+f*(f2*(3.+2.*sf)-2.*ee*(1.+4.*(1.-xi(l))*xi(l)*sf))
-
   100 continue
          goto 130
-
   110 do 120 j = jmd(1+mkc), jmd(1+mkc+1) - 1
          ix = lme(3,j)
          z = nxs(2,ix)
          f = 4.*(z+1.)*z*fme(j)*b/eo
          g = log(ek(k)/(2.*ee))+2.+exs(jxs(8,ix)+2)
          a = 12.*exs(jxs(8,ix))*ee/(121.*ek(k))
-
       do 120 l = 1, mpng
          sf = screen(a*xi(l))-g
   120    y(l) = y(l)+f*(f2*(3.+2.*sf)-2.*ee*(1.+4.*(1.-xi(l))*xi(l)*sf))
-
   130    ac((mpng+1)/2) = 0.
-
       do 140 l = 3, mpng, 2
          m = (mpng+2-l)/2
   140    ac(m) = ac(m+1)+y(l-2)+4.*y(l-1)+y(l)
       do 150 l = 1, mpng
   150    ech(l,k,n/nstp+1+(nee/nstp+1)*(mkc-1)) = min(max(zero,
      &        qpol((mpng-l)*(ac(1)/(mpng-1)),ac,cm,(mpng+1)/2)),one)
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-************************************************************************
-*                                                                      *
       subroutine tmpneu
-*                                                                      *
-*       adjust the temperature of neutron cross-section table iex.     *
-*       Last modified by K.Niita on 2009/10/06                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
-
-*-----------------------------------------------------------------------
-*     determine the temperature the table should have.
-*-----------------------------------------------------------------------
-
          k = 0
          th = 0.
       do 40 ic = 1, mxa
          j = mat(ic)
-
       do 10 m = jmd(1+j), jmd(1+j+1) - 1
    10    if(lme(1,m).eq.iex) goto 20
-
          goto 40
    20    if(k.eq.0) t = tmp((ic-1)*mxt+1)
          k = 1
          er = .01
          if(dbcn(20).ne.0.) er = 0.
-
       do 30 l = 1, mxt
    30    if(abs(tmp((ic-1)*mxt+1)-t).gt.er*t) goto 50
    40    continue
          if(k.eq.0) return
-
          th = t
-
-*-----------------------------------------------------------------------
-*     adjust elastic and total cross sections to correct temperature.
-*-----------------------------------------------------------------------
-
    50    if(abs(tbt(iex)-th).le.er*th) return
-
          b = 500.*abs(th-tbt(iex))/awn(iex)
-
       do 80 j = 1, nxs(3,iex)
          l = jxs(1,iex)+j-1
          if(xss(l).gt.b) goto 90
@@ -6324,98 +3708,35 @@ c        the constant 3.1329 is 4. * 0.885**2
    70    a = xss(l+3*nxs(3,iex))*(f2-f1)/f1
          xss(l+nxs(3,iex)) = xss(l+nxs(3,iex))+a
    80    xss(l+3*nxs(3,iex)) = xss(l+3*nxs(3,iex))+a
-
    90    tbt(iex) = th
-
-*-----------------------------------------------------------------------
-
       return
       end
-
-************************************************************************
-*                                                                      *
       subroutine tapefl(mm)
-*                                                                      *
-*       do all i/o on runtpe, the file of restart dumps.               *
-*       Last modified by K.Niita on 2009/10/06                         *
-*                                                                      *
-************************************************************************
       use GGMARRAYMOD !2020ASTOM
       implicit real*8 (a-h,o-z)
-
-*-----------------------------------------------------------------------
-
       include 'param.inc'
       include 'ggsparam.inc'
       include 'ggmparam.inc'
       include 'err.inc'
       common /paraj/  mstz(300), parz(300)
-
       parameter ( iur = 25 )
-
-*-----------------------------------------------------------------------
-
       character hc*10,hi*19,hk*8,hl*28,hp*32,hv*5
-
-*-----------------------------------------------------------------------
-
       goto (10,20,30,50,80,170,180,250) mm
-
-*-----------------------------------------------------------------------
-c >>>>>  mm=1 -- create runtpe with a unique name.  write first record.
-*-----------------------------------------------------------------------
-
    10 continue
       open(iur,form='unformatted',status='scratch')
       return
-
-*-----------------------------------------------------------------------
-* >>>>>  mm=2 -- write a cross section table on runtpe.
-*-----------------------------------------------------------------------
-
    20 call fastdw(iur,xss(lxss+1),nxs(1,iex))
          nkxs = nkxs + 1
          kxs(nkxs) = iex
       return
-
-*-----------------------------------------------------------------------
-* >>>>>  mm=3 -- write the fixed data and the first dump.
-*-----------------------------------------------------------------------
-
    30 return
-
-*-----------------------------------------------------------------------
-* >>>>>  mm=4 -- write a restart dump.
-*-----------------------------------------------------------------------
-
    50 return
-
-*-----------------------------------------------------------------------
-* >>>>>  mm=5 -- open existing runtpe and read it for continue run.
-*-----------------------------------------------------------------------
-
    80 return
-
-*-----------------------------------------------------------------------
-* >>>>>  mm=6 -- make sure of write access to runtpe.
-*-----------------------------------------------------------------------
-
   170 return
-
-*-----------------------------------------------------------------------
-* >>>>>  mm=7 -- open existing runtpe and read it for mcplot or plot.
-*-----------------------------------------------------------------------
-
   180 return
-
-*-----------------------------------------------------------------------
-* >>>>>  mm=8 -- set field length and read in the cross-section tables.
-*-----------------------------------------------------------------------
-
   250 continue
       if(mxe.eq.0) return
       rewind iur
-
 ! T.Sato 2021/08/03, check memory usage
       addressmax=(jxs(1,kxs(mxe))+nxs(1,kxs(mxe)))*1.0d0
       if(mbmemory*parz(201).lt.addressmax) then
@@ -6426,14 +3747,9 @@ c >>>>>  mm=1 -- create runtpe with a unique name.  write first record.
        call ErrWrite(ErrID,ErrCha)
        stop
       endif
-
       do 260 k = 1, mxe
   260    call fastdr(iur,xss(jxs(1,kxs(k))),
      &               nxs(1,kxs(k)))
-
       close(iur)
-
-*-----------------------------------------------------------------------
-
       return
       end
