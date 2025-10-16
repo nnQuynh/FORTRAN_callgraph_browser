@@ -49,8 +49,9 @@ print(args)
 # get a list of all paths
 # __loc__ = 'flexpart - Copy' # args.path
 # __loc__ = 'phits_small' # args.path
-__loc__ = 'phits' # args.path
+# __loc__ = 'phits' # args.path
 # __loc__ = 'angel' # args.path
+__loc__ = 'flexpart' # args.path
 allpaths = list(Path(__loc__).rglob('*.F*'))
 allpaths.extend(list(Path(__loc__).rglob('*.f*')))
 
