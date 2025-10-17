@@ -39,6 +39,9 @@ from pathlib import Path
 from numpy import random
 from tqdm import tqdm
 import pandas as pd
+import cProfile
+import pstats
+from pstats import SortKey
 
 ##########################
 ## arguments
@@ -54,8 +57,8 @@ print(args)
 
 # get a list of all paths
 # __loc__ = 'flexpart - Copy' # args.path
-# __loc__ = 'phits_small' # args.path
-__loc__ = 'phits' # args.path
+__loc__ = 'phits_small' # args.path
+# __loc__ = 'phits' # args.path
 # __loc__ = 'angel' # args.path
 # __loc__ = 'flexpart' # args.path
 allpaths = list(Path(__loc__).rglob('*.F*'))
@@ -72,13 +75,13 @@ print('Ignoring names: ', ' | '.join(skip))
 def ffind(n):
     '''Get the tree for a certain file number'''
 
-    # print('   - In def ffind(n)')
+    print('   - In def ffind(n)')
     f90 = allpaths[n]
     reader = FortranFileReader(str(f90),ignore_comments=True)
     f2008_parser = ParserFactory().create(std="f2008")
-    # print('      + Begin  f2008_parser(reader)')
+    print('      + Begin  f2008_parser(reader)')
     parse_tree = f2008_parser(reader)
-    # print('      + End  f2008_parser(reader)')
+    print('      + End  f2008_parser(reader)')
     return parse_tree
 
 def callhistory(x,chain=[]):
@@ -106,13 +109,14 @@ case = [i.parent for i in fparser.two.utils.walk(parse_tree_base,types=fparser.t
 case[0].children[0].get_name().__str__() 
 
 '''
-for fn in tqdm(range(len(allpaths))):
-    print('\nParsing file ', fn, ' of ', len(allpaths), ' : ', allpaths[fn])
-    parse_tree_base = ffind(fn)
-    # print('Finish parse_tree_base')
+def main():
+    for fn in tqdm(range(len(allpaths))):
+        print('\nParsing file ', fn, ' of ', len(allpaths), ' : ', allpaths[fn])
+        parse_tree_base = ffind(fn)
+        print('Finish parse_tree_base')
 
-    case = [i.parent for i in fparser.two.utils.walk(parse_tree_base,types=fparser.two.Fortran2003.End_Subroutine_Stmt)]
-    # print('case')
+        case = [i.parent for i in fparser.two.utils.walk(parse_tree_base,types=fparser.two.Fortran2003.End_Subroutine_Stmt)]
+        print('case')
 
     f2008_parser = ParserFactory().create(std="f2008")
 
@@ -138,71 +142,82 @@ for fn in tqdm(range(len(allpaths))):
 
         store[origin] = dict(filename = allpaths[fn], code=code, content=str(content),links=links, hook=hook, parent=origin)
         
-##########################
-## get information for each
-##########################
+    ##########################
+    ## get information for each
+    ##########################
 
-data = []
-for i in store:
-    x = store[i]
-    for j in x['links']:
-        j = x['links'][j]
-        data.append([j['source'],j['target'],j['file'],j['loop'],j['condition']])
+    data = []
+    for i in store:
+        x = store[i]
+        for j in x['links']:
+            j = x['links'][j]
+            data.append([j['source'],j['target'],j['file'],j['loop'],j['condition']])
 
-df = pd.DataFrame(data,columns='source target filename loop condition'.split()) 
+    df = pd.DataFrame(data,columns='source target filename loop condition'.split()) 
 
-df['source'] = df['source'].astype(str)
-df['target'] = df['target'].astype(str)
-df['filename'] = df['filename'].astype(str)
+    df['source'] = df['source'].astype(str)
+    df['target'] = df['target'].astype(str)
+    df['filename'] = df['filename'].astype(str)
 
-del data
+    del data
 
-# filter out functions we want to avoid
-df = df[[i not in skip for i in df.source]] 
-df = df[[i not in skip for i in df.target]] 
-# 
-# ukca = set(df.source)
-# df['UKCA'] = [i in ukca for i in df.target]
+    # filter out functions we want to avoid
+    df = df[[i not in skip for i in df.source]] 
+    df = df[[i not in skip for i in df.target]] 
+    # 
+    # ukca = set(df.source)
+    # df['UKCA'] = [i in ukca for i in df.target]
 
-io = re.compile(r'.*(PRINT|GET|READ|WRITE|FETCH).*')
-df['IO'] = [ bool(io.match(i)) for i in df.source]
-
-
-dfg = df.groupby(['source','target']).sum().reset_index() 
-
-nds = []
-for i in store:
-    target = df[df.target==i].sum()
-    st = store[i]
-    nds.append([i, str(st['filename']), st['parent'], st['code'],bool(io.match(i)),bool(target.loop),bool(target.condition)]) 
-    # nds.append([i, st['parent'], st['code'],bool(io.match(i)),bool(target.loop),bool(target.condition)]) 
-
-for i in set(df.target) - set(store.keys()):
-    nds.append([i, 'UNKNOWN', None,bool(io.match(i)),False,False]) 
-    
-dfn = pd.DataFrame(nds, columns = 'routine filename parent code io loop condition'.split())
-# dfn = pd.DataFrame(nds, columns = 'routine parent code io loop condition'.split())
-dfn['x']= random.random(len(dfn))*100   
-dfn['y']= random.random(len(dfn))*100 
-
-dfn.loc[dfn['code'] == True, 'code'] = False
-dfn['filename'] = dfn['filename'].astype(str)
-dfn['parent'] = dfn['parent'].astype(str)
-# dfn['code'] = dfn['code'].astype(str)
-
-share = {}
-share['location']= __loc__
-share['files'] = len(allpaths)
-share['name'] = args.description
-# share['empty'] = len(empty)
-# share['routines'] = sum(dfn.hook>0)
-# share['version'] = re.findall("BASE_UM_REV='(.*)'",open( str(Path(__loc__).parents[2])+'/rose-stem/rose-suite.conf' ,'r').read())[0]
-
-data = dict(nodes = dfn.T.to_json(), links = dfg.T.to_json(), share=share)
-
-json.dump(data,open('fgraph.json','w'))
+    io = re.compile(r'.*(PRINT|GET|READ|WRITE|FETCH).*')
+    df['IO'] = [ bool(io.match(i)) for i in df.source]
 
 
+    dfg = df.groupby(['source','target']).sum().reset_index() 
+
+    nds = []
+    for i in store:
+        target = df[df.target==i].sum()
+        st = store[i]
+        nds.append([i, str(st['filename']), st['parent'], st['code'],bool(io.match(i)),bool(target.loop),bool(target.condition)]) 
+        # nds.append([i, st['parent'], st['code'],bool(io.match(i)),bool(target.loop),bool(target.condition)]) 
+
+    for i in set(df.target) - set(store.keys()):
+        nds.append([i, 'UNKNOWN', None,bool(io.match(i)),False,False]) 
+        
+    dfn = pd.DataFrame(nds, columns = 'routine filename parent code io loop condition'.split())
+    # dfn = pd.DataFrame(nds, columns = 'routine parent code io loop condition'.split())
+    dfn['x']= random.random(len(dfn))*100   
+    dfn['y']= random.random(len(dfn))*100 
+
+    dfn.loc[dfn['code'] == True, 'code'] = False
+    dfn['filename'] = dfn['filename'].astype(str)
+    dfn['parent'] = dfn['parent'].astype(str)
+    # dfn['code'] = dfn['code'].astype(str)
+
+    share = {}
+    share['location']= __loc__
+    share['files'] = len(allpaths)
+    share['name'] = args.description
+    # share['empty'] = len(empty)
+    # share['routines'] = sum(dfn.hook>0)
+    # share['version'] = re.findall("BASE_UM_REV='(.*)'",open( str(Path(__loc__).parents[2])+'/rose-stem/rose-suite.conf' ,'r').read())[0]
+
+    data = dict(nodes = dfn.T.to_json(), links = dfg.T.to_json(), share=share)
+
+    json.dump(data,open('fgraph.json','w'))
 
 
+
+if __name__ == '__main__':
+    # Profile the 'main' function and save results to a file
+    cProfile.run('main()', 'profile_results.prof')
+
+    # Load and analyze the profiling results
+    stats = pstats.Stats('profile_results.prof')
+
+    # Sort by cumulative time and print the top 10 entries
+    stats.sort_stats(SortKey.CUMULATIVE).print_stats(10)
+
+    # Sort by total time and print the top 5 entries
+    stats.sort_stats(SortKey.TIME).print_stats(10)
 
